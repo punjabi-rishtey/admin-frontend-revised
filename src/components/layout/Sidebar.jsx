@@ -17,7 +17,7 @@ const Sidebar = () => {
     { path: '/coupons', name: 'Coupons', icon: Tag },
     { path: '/messages', name: 'Messages', icon: MessageSquare },
     { path: '/reviews', name: 'Reviews', icon: Star },
-    { path: '/utility', name: 'Utility', icon: Settings },
+    // { path: '/utility', name: 'Utility', icon: Settings },
   ];
 
   return (

@@ -5,6 +5,7 @@ import Layout from './components/layout/Layout';
 import Login from './components/pages/Login';
 import Dashboard from './components/pages/Dashboard';
 import Users from './components/pages/Users';
+import UserDetail from './components/pages/UserDetail';
 import Testimonials from './components/pages/Testimonials';
 import Analytics from './components/pages/Analytics';
 import CustomerSupport from './components/pages/CustomerSupport';
@@ -16,7 +17,7 @@ import Reviews from './components/pages/Reviews';
 // import Utility from './components/pages/Utility';
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -46,6 +47,7 @@ function App() {
           <Route index element={<Navigate to="/dashboard" />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="users" element={<Users />} />
+          <Route path="users/:id" element={<UserDetail />} />
           <Route path="testimonials" element={<Testimonials />} />
           <Route path="analytics" element={<Analytics />} />
           <Route path="support" element={<CustomerSupport />} />

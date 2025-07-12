@@ -19,6 +19,25 @@ const mockData = {
       religion: 'Sikh',
       caste: 'Jatt',
       marital_status: 'Never Married',
+      mangalik: 'No',
+      language: 'Punjabi, Hindi, English',
+      hobbies: ['Reading', 'Cricket', 'Music'],
+      birth_details: {
+        birth_time: '10:30 AM',
+        birth_place: 'Ludhiana'
+      },
+      physical_attributes: {
+        skin_tone: 'Fair',
+        body_type: 'Athletic',
+        physical_disability: false,
+        disability_reason: ''
+      },
+      lifestyle: {
+        smoke: 'No',
+        drink: 'Occasionally',
+        veg_nonveg: 'Vegetarian',
+        nri_status: false
+      },
       location: {
         address: '123 Green Park',
         city: 'Ludhiana',
@@ -28,7 +47,56 @@ const mockData = {
         register_date: '2024-01-15',
         exp_date: '2025-01-15'
       },
-      is_deleted: false
+      profile_pictures: [
+        'https://via.placeholder.com/300x300',
+        'https://via.placeholder.com/300x300'
+      ],
+      is_deleted: false,
+      profileCompletion: 85,
+      // Related data
+      family: {
+        family_value: 'Traditional',
+        family_type: 'Joint Family',
+        mother: {
+          name: 'Harpreet Kaur',
+          occupation: 'Homemaker'
+        },
+        father: {
+          name: 'Gurdev Singh',
+          occupation: 'Business'
+        },
+        siblings: {
+          brother_count: 1,
+          sister_count: 2
+        }
+      },
+      education: {
+        education_level: 'Masters',
+        education_field: 'Computer Science',
+        school_details: {
+          name: 'DAV Public School',
+          city: 'Ludhiana'
+        },
+        college_details: {
+          name: 'Punjab University',
+          city: 'Chandigarh',
+          passout_year: '2018'
+        }
+      },
+      profession: {
+        occupation: 'Software Engineer',
+        designation: 'Senior Developer',
+        working_with: 'MNC',
+        income: '10-15 Lakhs',
+        work_address: {
+          address: 'IT Park, Phase 2',
+          city: 'Chandigarh'
+        }
+      },
+      astrology: {
+        rashi_nakshatra: 'Mesh/Ashwini',
+        gotra: 'Kashyap'
+      }
     },
     {
       _id: '2',
@@ -43,6 +111,25 @@ const mockData = {
       religion: 'Sikh',
       caste: 'Khatri',
       marital_status: 'Never Married',
+      mangalik: 'No',
+      language: 'Punjabi, Hindi',
+      hobbies: ['Dancing', 'Cooking', 'Travelling'],
+      birth_details: {
+        birth_time: '2:15 PM',
+        birth_place: 'Chandigarh'
+      },
+      physical_attributes: {
+        skin_tone: 'Wheatish',
+        body_type: 'Slim',
+        physical_disability: false,
+        disability_reason: ''
+      },
+      lifestyle: {
+        smoke: 'No',
+        drink: 'No',
+        veg_nonveg: 'Vegetarian',
+        nri_status: false
+      },
       location: {
         address: '456 Model Town',
         city: 'Chandigarh',
@@ -52,7 +139,54 @@ const mockData = {
         register_date: '2024-02-20',
         exp_date: '2025-02-20'
       },
-      is_deleted: false
+      profile_pictures: [
+        'https://via.placeholder.com/300x300'
+      ],
+      is_deleted: false,
+      profileCompletion: 70,
+      family: {
+        family_value: 'Moderate',
+        family_type: 'Nuclear Family',
+        mother: {
+          name: 'Jasleen Kaur',
+          occupation: 'Teacher'
+        },
+        father: {
+          name: 'Manmohan Singh',
+          occupation: 'Government Service'
+        },
+        siblings: {
+          brother_count: 0,
+          sister_count: 1
+        }
+      },
+      education: {
+        education_level: 'Bachelors',
+        education_field: 'Commerce',
+        school_details: {
+          name: 'Sacred Heart School',
+          city: 'Chandigarh'
+        },
+        college_details: {
+          name: 'MCM DAV College',
+          city: 'Chandigarh',
+          passout_year: '2020'
+        }
+      },
+      profession: {
+        occupation: 'Accountant',
+        designation: 'Senior Accountant',
+        working_with: 'Private Company',
+        income: '5-7 Lakhs',
+        work_address: {
+          address: 'Sector 17',
+          city: 'Chandigarh'
+        }
+      },
+      astrology: {
+        rashi_nakshatra: 'Kanya/Hasta',
+        gotra: 'Bharadwaj'
+      }
     },
     {
       _id: '3',
@@ -369,6 +503,12 @@ const mockApi = {
       return { data: mockData.analytics };
     }
     
+    if (url.includes('/users') && url.match(/\/users\/(\w+)$/)) {
+      const id = url.match(/\/users\/(\w+)$/)?.[1];
+      const user = mockData.users.find(u => u._id === id);
+      return { data: { user } };
+    }
+    
     if (url.includes('/users')) {
       let users = [...mockData.users];
       if (config?.params?.status && config.params.status !== 'all') {
@@ -521,6 +661,21 @@ const mockApi = {
       return { data: user };
     }
     
+    if (url.includes('/status')) {
+      const id = url.match(/users\/(\w+)\/status/)?.[1];
+      const user = mockData.users.find(u => u._id === id);
+      if (user) {
+        user.status = data.status;
+        // Update expiry date based on status
+        if (data.status === 'Approved') {
+          user.metadata.exp_date = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
+        } else if (data.status === 'Expired') {
+          user.metadata.exp_date = new Date().toISOString();
+        }
+      }
+      return { data: user };
+    }
+    
     if (url.includes('/approve')) {
       const id = url.match(/payments\/(\w+)\/approve/)?.[1];
       const payment = mockData.payments.find(p => p._id === id);
@@ -621,8 +776,10 @@ const adminApi = {
   
   // Users
   fetchUsers: (params) => api.get('/users', { params }),
+  fetchUserDetails: (id) => api.get(`/users/${id}`),
   deleteUser: (id) => api.delete(`/users/${id}`),
   restoreUser: (id) => api.put(`/users/${id}/restore`),
+  updateUserStatus: (id, status) => api.put(`/users/${id}/status`, { status }),
   
   // Testimonials
   fetchTestimonials: () => api.get('/testimonials'),
