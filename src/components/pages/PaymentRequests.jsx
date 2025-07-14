@@ -1,10 +1,10 @@
 // components/pages/PaymentRequests.jsx
-import { useState, useEffect } from 'react';
-import { Check, X, Eye, Clock, Calendar } from 'lucide-react';
-import DataTable from '../common/DataTable';
-import ConfirmDialog from '../common/ConfirmDialog';
-import LoadingSpinner from '../common/LoadingSpinner';
-import adminApi from '../../services/adminApi';
+import { useState, useEffect } from "react";
+import { Check, X, Eye, Clock, Calendar } from "lucide-react";
+import DataTable from "../common/DataTable";
+import ConfirmDialog from "../common/ConfirmDialog";
+import LoadingSpinner from "../common/LoadingSpinner";
+import adminApi from "../../services/api";
 
 const PaymentRequests = () => {
   const [payments, setPayments] = useState([]);
@@ -12,7 +12,7 @@ const PaymentRequests = () => {
   const [selectedPayment, setSelectedPayment] = useState(null);
   const [showApproveDialog, setShowApproveDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
-  const [filter, setFilter] = useState('pending');
+  const [filter, setFilter] = useState("pending");
 
   useEffect(() => {
     fetchPayments();
@@ -20,10 +20,12 @@ const PaymentRequests = () => {
 
   const fetchPayments = async () => {
     try {
-      const { data } = await adminApi.fetchPaymentRequests({ status: filter });
-      setPayments(data.payments);
+      const { payments } = await adminApi.fetchPaymentRequests({
+        status: filter,
+      });
+      setPayments(payments);
     } catch (error) {
-      console.error('Error fetching payments:', error);
+      console.error("Error fetching payments:", error);
     } finally {
       setLoading(false);
     }
@@ -35,7 +37,7 @@ const PaymentRequests = () => {
       fetchPayments();
       setShowApproveDialog(false);
     } catch (error) {
-      console.error('Error approving payment:', error);
+      console.error("Error approving payment:", error);
     }
   };
 
@@ -45,59 +47,85 @@ const PaymentRequests = () => {
       fetchPayments();
       setShowRejectDialog(false);
     } catch (error) {
-      console.error('Error rejecting payment:', error);
+      console.error("Error rejecting payment:", error);
     }
   };
 
   const columns = [
     {
-      key: 'fullName',
-      label: 'User',
+      key: "fullName",
+      label: "User",
       sortable: true,
       render: (value, payment) => (
         <div>
           <div className="font-medium">{value}</div>
           <div className="text-sm text-gray-500">{payment.phoneNumber}</div>
         </div>
-      )
+      ),
     },
     {
-      key: 'createdAt',
-      label: 'Request Date',
+      key: "createdAt",
+      label: "Request Date",
       sortable: true,
-      render: (value) => new Date(value).toLocaleDateString()
+      render: (value) => new Date(value).toLocaleDateString(),
     },
     {
-      key: 'couponCode',
-      label: 'Coupon',
-      render: (value) => value || '-'
+      key: "couponCode",
+      label: "Coupon",
+      render: (value) => value || "-",
     },
     {
-      key: 'discountAmount',
-      label: 'Discount',
-      render: (value) => value > 0 ? `₹${value}` : '-'
+      key: "discountAmount",
+      label: "Discount",
+      render: (value) => (value > 0 ? `₹${value}` : "-"),
+    },
+    // {
+    //   key: "status",
+    //   label: "Status",
+    //   render: (value) => {
+    //     const statusColors = {
+    //       pending: "bg-yellow-100 text-yellow-800",
+    //       approved: "bg-green-100 text-green-800",
+    //       rejected: "bg-red-100 text-red-800",
+    //     };
+    //     return (
+    //       <span
+    //         className={`px-2 py-1 text-xs rounded-full font-medium ${
+    //           statusColors[value] || "bg-gray-100 text-gray-800"
+    //         }`}
+    //       >
+    //         {value}
+    //       </span>
+    //     );
+    //   },
+    // },
+    {
+      key: "expiresAt",
+      label: "Expires",
+      render: (value) =>
+        value ? new Date(value).toLocaleDateString() : "Not set",
     },
     {
-      key: 'status',
-      label: 'Status',
+      key: "paymentStatus",
+      label: "Status",
       render: (value) => {
         const statusColors = {
-          pending: 'bg-yellow-100 text-yellow-800',
-          approved: 'bg-green-100 text-green-800',
-          rejected: 'bg-red-100 text-red-800'
+          pending: "bg-yellow-100 text-yellow-800",
+          approved: "bg-green-100 text-green-800",
+          rejected: "bg-red-100 text-red-800",
+          canceled: "bg-red-100 text-red-800",
         };
         return (
-          <span className={`px-2 py-1 text-xs rounded-full font-medium ${statusColors[value] || 'bg-gray-100 text-gray-800'}`}>
+          <span
+            className={`px-2 py-1 text-xs rounded-full font-medium ${
+              statusColors[value?.toLowerCase()] || "bg-gray-100 text-gray-800"
+            }`}
+          >
             {value}
           </span>
         );
-      }
+      },
     },
-    {
-      key: 'expiresAt',
-      label: 'Expires',
-      render: (value) => value ? new Date(value).toLocaleDateString() : 'Not set'
-    }
   ];
 
   const actions = (payment) => (
@@ -112,7 +140,7 @@ const PaymentRequests = () => {
       >
         <Eye className="h-4 w-4 text-gray-600" />
       </button>
-      {payment.status === 'pending' && (
+      {payment.paymentStatus === "pending" && (
         <>
           <button
             onClick={(e) => {
@@ -150,7 +178,8 @@ const PaymentRequests = () => {
         <div className="flex items-center space-x-2">
           <Clock className="h-5 w-5 text-yellow-500" />
           <span className="text-sm text-gray-600">
-            {payments.filter(p => p.status === 'pending').length} pending approvals
+            {payments.filter((p) => p.paymentStatus === "pending").length}
+            pending approvals
           </span>
         </div>
       </div>
@@ -159,14 +188,14 @@ const PaymentRequests = () => {
         <div className="flex items-center space-x-4">
           <span className="text-sm font-medium text-gray-700">Filter:</span>
           <div className="flex space-x-2">
-            {['all', 'pending', 'approved', 'rejected'].map((status) => (
+            {["all", "pending", "approved", "rejected"].map((status) => (
               <button
                 key={status}
                 onClick={() => setFilter(status)}
                 className={`px-3 py-1 text-sm rounded-lg transition-colors ${
                   filter === status
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    ? "bg-purple-600 text-white"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
               >
                 {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -229,32 +258,50 @@ const PaymentDetailModal = ({ payment, onClose }) => {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-medium text-gray-500">Name</label>
+                <label className="text-sm font-medium text-gray-500">
+                  Name
+                </label>
                 <p className="text-gray-900">{payment.fullName}</p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-500">Phone</label>
+                <label className="text-sm font-medium text-gray-500">
+                  Phone
+                </label>
                 <p className="text-gray-900">{payment.phoneNumber}</p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-500">Request Date</label>
-                <p className="text-gray-900">{new Date(payment.createdAt).toLocaleString()}</p>
+                <label className="text-sm font-medium text-gray-500">
+                  Request Date
+                </label>
+                <p className="text-gray-900">
+                  {new Date(payment.createdAt).toLocaleString()}
+                </p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-500">Status</label>
-                <p className="text-gray-900 capitalize">{payment.status}</p>
+                <label className="text-sm font-medium text-gray-500">
+                  Status
+                </label>
+                <p className="text-gray-900 capitalize">
+                  {payment.paymentStatus}
+                </p>
               </div>
             </div>
 
             {payment.couponCode && (
               <div>
-                <label className="text-sm font-medium text-gray-500">Coupon Applied</label>
-                <p className="text-gray-900">{payment.couponCode} (₹{payment.discountAmount} off)</p>
+                <label className="text-sm font-medium text-gray-500">
+                  Coupon Applied
+                </label>
+                <p className="text-gray-900">
+                  {payment.couponCode} (₹{payment.discountAmount} off)
+                </p>
               </div>
             )}
 
             <div>
-              <label className="text-sm font-medium text-gray-500 mb-2 block">Payment Screenshot</label>
+              <label className="text-sm font-medium text-gray-500 mb-2 block">
+                Payment Screenshot
+              </label>
               {payment.screenshotUrl ? (
                 <img
                   src={payment.screenshotUrl}

@@ -1,11 +1,18 @@
 // components/pages/Coupons.jsx
-import { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Tag, ToggleLeft, ToggleRight } from 'lucide-react';
-import DataTable from '../common/DataTable';
-import ModalForm from '../common/ModalForm';
-import ConfirmDialog from '../common/ConfirmDialog';
-import LoadingSpinner from '../common/LoadingSpinner';
-import adminApi from '../../services/adminApi';
+import { useState, useEffect } from "react";
+import {
+  Plus,
+  Edit2,
+  Trash2,
+  Tag,
+  ToggleLeft,
+  ToggleRight,
+} from "lucide-react";
+import DataTable from "../common/DataTable";
+import ModalForm from "../common/ModalForm";
+import ConfirmDialog from "../common/ConfirmDialog";
+import LoadingSpinner from "../common/LoadingSpinner";
+import adminApi from "../../services/api";
 
 const Coupons = () => {
   const [coupons, setCoupons] = useState([]);
@@ -14,10 +21,10 @@ const Coupons = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedCoupon, setSelectedCoupon] = useState(null);
   const [formData, setFormData] = useState({
-    code: '',
-    discountType: 'percentage',
-    discountValue: '',
-    isActive: true
+    code: "",
+    discountType: "percentage",
+    discountValue: "",
+    isActive: true,
   });
 
   useEffect(() => {
@@ -26,10 +33,12 @@ const Coupons = () => {
 
   const fetchCoupons = async () => {
     try {
-      const { data } = await adminApi.fetchCoupons();
-      setCoupons(data.coupons);
+      const {
+        data: { coupons },
+      } = await adminApi.fetchCoupons();
+      setCoupons(coupons);
     } catch (error) {
-      console.error('Error fetching coupons:', error);
+      console.error("Error fetching coupons:", error);
     } finally {
       setLoading(false);
     }
@@ -46,7 +55,7 @@ const Coupons = () => {
       fetchCoupons();
       handleCloseModal();
     } catch (error) {
-      console.error('Error saving coupon:', error);
+      console.error("Error saving coupon:", error);
     }
   };
 
@@ -56,7 +65,7 @@ const Coupons = () => {
       fetchCoupons();
       setShowDeleteDialog(false);
     } catch (error) {
-      console.error('Error deleting coupon:', error);
+      console.error("Error deleting coupon:", error);
     }
   };
 
@@ -65,7 +74,7 @@ const Coupons = () => {
       await adminApi.updateCoupon(coupon._id, { isActive: !coupon.isActive });
       fetchCoupons();
     } catch (error) {
-      console.error('Error toggling coupon:', error);
+      console.error("Error toggling coupon:", error);
     }
   };
 
@@ -73,10 +82,10 @@ const Coupons = () => {
     setShowModal(false);
     setSelectedCoupon(null);
     setFormData({
-      code: '',
-      discountType: 'percentage',
-      discountValue: '',
-      isActive: true
+      code: "",
+      discountType: "percentage",
+      discountValue: "",
+      isActive: true,
     });
   };
 
@@ -86,50 +95,49 @@ const Coupons = () => {
       code: coupon.code,
       discountType: coupon.discountType,
       discountValue: coupon.discountValue,
-      isActive: coupon.isActive
+      isActive: coupon.isActive,
     });
     setShowModal(true);
   };
 
   const columns = [
     {
-      key: 'code',
-      label: 'Coupon Code',
+      key: "code",
+      label: "Coupon Code",
       sortable: true,
       render: (value) => (
         <div className="flex items-center space-x-2">
           <Tag className="h-4 w-4 text-purple-600" />
           <span className="font-mono font-medium">{value}</span>
         </div>
-      )
+      ),
     },
     {
-      key: 'discountType',
-      label: 'Type',
+      key: "discountType",
+      label: "Type",
       sortable: true,
-      render: (value) => (
-        <span className="capitalize">{value}</span>
-      )
+      render: (value) => <span className="capitalize">{value}</span>,
     },
     {
-      key: 'discountValue',
-      label: 'Discount',
+      key: "discountValue",
+      label: "Discount",
       sortable: true,
-      render: (value, coupon) => (
-        coupon.discountType === 'percentage' ? `${value}%` : `₹${value}`
-      )
+      render: (value, coupon) =>
+        coupon.discountType === "percentage" ? `${value}%` : `₹${value}`,
     },
     {
-      key: 'isActive',
-      label: 'Status',
+      key: "isActive",
+      label: "Status",
       render: (value) => (
-        <span className={`px-2 py-1 text-xs rounded-full font-medium ${
-          value ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-        }`}>
-          {value ? 'Active' : 'Inactive'}
+        <span
+          className={`px-2 py-1 text-xs rounded-full font-medium ${
+            value ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+          }`}
+        >
+          {value ? "Active" : "Inactive"}
         </span>
-      )
-    }
+      ),
+    },
   ];
 
   const actions = (coupon) => (
@@ -140,7 +148,7 @@ const Coupons = () => {
           handleToggleActive(coupon);
         }}
         className="p-1 rounded hover:bg-gray-100"
-        title={coupon.isActive ? 'Deactivate' : 'Activate'}
+        title={coupon.isActive ? "Deactivate" : "Activate"}
       >
         {coupon.isActive ? (
           <ToggleRight className="h-4 w-4 text-green-600" />
@@ -190,7 +198,9 @@ const Coupons = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Total Coupons</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{coupons.length}</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">
+                {coupons.length}
+              </p>
             </div>
             <Tag className="h-8 w-8 text-purple-600" />
           </div>
@@ -198,8 +208,12 @@ const Coupons = () => {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Active Coupons</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{coupons.filter(c => c.isActive).length}</p>
+              <p className="text-sm font-medium text-gray-600">
+                Active Coupons
+              </p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">
+                {coupons.filter((c) => c.isActive).length}
+              </p>
             </div>
             <div className="p-2 bg-green-100 rounded-lg">
               <Tag className="h-6 w-6 text-green-600" />
@@ -209,8 +223,12 @@ const Coupons = () => {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Inactive Coupons</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{coupons.filter(c => !c.isActive).length}</p>
+              <p className="text-sm font-medium text-gray-600">
+                Inactive Coupons
+              </p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">
+                {coupons.filter((c) => !c.isActive).length}
+              </p>
             </div>
             <div className="p-2 bg-red-100 rounded-lg">
               <Tag className="h-6 w-6 text-red-600" />
@@ -229,17 +247,21 @@ const Coupons = () => {
       <ModalForm
         isOpen={showModal}
         onClose={handleCloseModal}
-        title={selectedCoupon ? 'Edit Coupon' : 'Add Coupon'}
+        title={selectedCoupon ? "Edit Coupon" : "Add Coupon"}
         onSubmit={handleSubmit}
       >
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Coupon Code</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Coupon Code
+            </label>
             <input
               type="text"
               required
               value={formData.code}
-              onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
+              onChange={(e) =>
+                setFormData({ ...formData, code: e.target.value.toUpperCase() })
+              }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-mono"
               placeholder="e.g., SAVE20"
               disabled={!!selectedCoupon}
@@ -247,10 +269,14 @@ const Coupons = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Discount Type</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Discount Type
+            </label>
             <select
               value={formData.discountType}
-              onChange={(e) => setFormData({ ...formData, discountType: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, discountType: e.target.value })
+              }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             >
               <option value="percentage">Percentage</option>
@@ -260,17 +286,24 @@ const Coupons = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Discount Value {formData.discountType === 'percentage' ? '(%)' : '(₹)'}
+              Discount Value{" "}
+              {formData.discountType === "percentage" ? "(%)" : "(₹)"}
             </label>
             <input
               type="number"
               required
               min="0"
-              max={formData.discountType === 'percentage' ? '100' : undefined}
+              max={formData.discountType === "percentage" ? "100" : undefined}
               value={formData.discountValue}
-              onChange={(e) => setFormData({ ...formData, discountValue: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, discountValue: e.target.value })
+              }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              placeholder={formData.discountType === 'percentage' ? 'e.g., 20' : 'e.g., 100'}
+              placeholder={
+                formData.discountType === "percentage"
+                  ? "e.g., 20"
+                  : "e.g., 100"
+              }
             />
           </div>
 
@@ -279,10 +312,15 @@ const Coupons = () => {
               type="checkbox"
               id="isActive"
               checked={formData.isActive}
-              onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+              onChange={(e) =>
+                setFormData({ ...formData, isActive: e.target.checked })
+              }
               className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
             />
-            <label htmlFor="isActive" className="text-sm font-medium text-gray-700">
+            <label
+              htmlFor="isActive"
+              className="text-sm font-medium text-gray-700"
+            >
               Active
             </label>
           </div>
@@ -299,7 +337,7 @@ const Coupons = () => {
               type="submit"
               className="px-4 py-2 text-white bg-purple-600 rounded-lg hover:bg-purple-700"
             >
-              {selectedCoupon ? 'Update' : 'Add'} Coupon
+              {selectedCoupon ? "Update" : "Add"} Coupon
             </button>
           </div>
         </div>

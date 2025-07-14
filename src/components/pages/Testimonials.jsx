@@ -1,11 +1,11 @@
 // components/pages/Testimonials.jsx
-import { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Calendar, Image } from 'lucide-react';
-import DataTable from '../common/DataTable';
-import ModalForm from '../common/ModalForm';
-import ConfirmDialog from '../common/ConfirmDialog';
-import LoadingSpinner from '../common/LoadingSpinner';
-import adminApi from '../../services/adminApi';
+import { useState, useEffect } from "react";
+import { Plus, Edit2, Trash2, Calendar, Image } from "lucide-react";
+import DataTable from "../common/DataTable";
+import ModalForm from "../common/ModalForm";
+import ConfirmDialog from "../common/ConfirmDialog";
+import LoadingSpinner from "../common/LoadingSpinner";
+import adminApi from "../../services/api";
 
 const Testimonials = () => {
   const [testimonials, setTestimonials] = useState([]);
@@ -14,12 +14,12 @@ const Testimonials = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedTestimonial, setSelectedTestimonial] = useState(null);
   const [formData, setFormData] = useState({
-    user_name: '',
-    message: '',
-    image_url: '',
-    groom_registration_date: '',
-    bride_registration_date: '',
-    marriage_date: ''
+    user_name: "",
+    message: "",
+    image_url: "",
+    groom_registration_date: "",
+    bride_registration_date: "",
+    marriage_date: "",
   });
 
   useEffect(() => {
@@ -28,10 +28,10 @@ const Testimonials = () => {
 
   const fetchTestimonials = async () => {
     try {
-      const { data } = await adminApi.fetchTestimonials();
-      setTestimonials(data.testimonials);
+      const { testimonials } = await adminApi.fetchTestimonials();
+      setTestimonials(testimonials);
     } catch (error) {
-      console.error('Error fetching testimonials:', error);
+      console.error("Error fetching testimonials:", error);
     } finally {
       setLoading(false);
     }
@@ -48,7 +48,7 @@ const Testimonials = () => {
       fetchTestimonials();
       handleCloseModal();
     } catch (error) {
-      console.error('Error saving testimonial:', error);
+      console.error("Error saving testimonial:", error);
     }
   };
 
@@ -58,7 +58,7 @@ const Testimonials = () => {
       fetchTestimonials();
       setShowDeleteDialog(false);
     } catch (error) {
-      console.error('Error deleting testimonial:', error);
+      console.error("Error deleting testimonial:", error);
     }
   };
 
@@ -66,12 +66,12 @@ const Testimonials = () => {
     setShowModal(false);
     setSelectedTestimonial(null);
     setFormData({
-      user_name: '',
-      message: '',
-      image_url: '',
-      groom_registration_date: '',
-      bride_registration_date: '',
-      marriage_date: ''
+      user_name: "",
+      message: "",
+      image_url: "",
+      groom_registration_date: "",
+      bride_registration_date: "",
+      marriage_date: "",
     });
   };
 
@@ -80,50 +80,57 @@ const Testimonials = () => {
     setFormData({
       user_name: testimonial.user_name,
       message: testimonial.message,
-      image_url: testimonial.image_url || '',
-      groom_registration_date: testimonial.groom_registration_date?.split('T')[0] || '',
-      bride_registration_date: testimonial.bride_registration_date?.split('T')[0] || '',
-      marriage_date: testimonial.marriage_date?.split('T')[0] || ''
+      image_url: testimonial.image_url || "",
+      groom_registration_date:
+        testimonial.groom_registration_date?.split("T")[0] || "",
+      bride_registration_date:
+        testimonial.bride_registration_date?.split("T")[0] || "",
+      marriage_date: testimonial.marriage_date?.split("T")[0] || "",
     });
     setShowModal(true);
   };
 
   const columns = [
     {
-      key: 'user_name',
-      label: 'Couple Name',
-      sortable: true
+      key: "user_name",
+      label: "Couple Name",
+      sortable: true,
     },
     {
-      key: 'message',
-      label: 'Message',
+      key: "message",
+      label: "Message",
       render: (value) => (
         <div className="max-w-xs truncate" title={value}>
           {value}
         </div>
-      )
+      ),
     },
     {
-      key: 'marriage_date',
-      label: 'Marriage Date',
+      key: "marriage_date",
+      label: "Marriage Date",
       sortable: true,
-      render: (value) => value ? new Date(value).toLocaleDateString() : 'Not specified'
+      render: (value) =>
+        value ? new Date(value).toLocaleDateString() : "Not specified",
     },
     {
-      key: 'created_at',
-      label: 'Added On',
+      key: "created_at",
+      label: "Added On",
       sortable: true,
-      render: (value) => new Date(value).toLocaleDateString()
+      render: (value) => new Date(value).toLocaleDateString(),
     },
     {
-      key: 'image_url',
-      label: 'Has Image',
+      key: "image_url",
+      label: "Has Image",
       render: (value) => (
-        <span className={`px-2 py-1 text-xs rounded-full ${value ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-          {value ? 'Yes' : 'No'}
+        <span
+          className={`px-2 py-1 text-xs rounded-full ${
+            value ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
+          }`}
+        >
+          {value ? "Yes" : "No"}
         </span>
-      )
-    }
+      ),
+    },
   ];
 
   const actions = (testimonial) => (
@@ -155,7 +162,9 @@ const Testimonials = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-900">Owner's Creatives (Testimonials)</h1>
+        <h1 className="text-3xl font-bold text-gray-900">
+          Owner's Creatives (Testimonials)
+        </h1>
         <button
           onClick={() => setShowModal(true)}
           className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
@@ -175,70 +184,99 @@ const Testimonials = () => {
       <ModalForm
         isOpen={showModal}
         onClose={handleCloseModal}
-        title={selectedTestimonial ? 'Edit Testimonial' : 'Add Testimonial'}
+        title={selectedTestimonial ? "Edit Testimonial" : "Add Testimonial"}
         onSubmit={handleSubmit}
       >
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Couple Name</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Couple Name
+            </label>
             <input
               type="text"
               required
               value={formData.user_name}
-              onChange={(e) => setFormData({ ...formData, user_name: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, user_name: e.target.value })
+              }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Message</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Message
+            </label>
             <textarea
               required
               rows={4}
               value={formData.message}
-              onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, message: e.target.value })
+              }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Image URL</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Image URL
+            </label>
             <input
-              type="url"
-              value={formData.image_url}
-              onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              placeholder="https://example.com/image.jpg"
+              type="file"
+              accept="image/*"
+              onChange={(e) =>
+                setFormData({ ...formData, image_url: e.target.files[0] })
+              }
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Groom Registration</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Groom Registration
+              </label>
               <input
                 type="date"
                 value={formData.groom_registration_date}
-                onChange={(e) => setFormData({ ...formData, groom_registration_date: e.target.value })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    groom_registration_date: e.target.value,
+                  })
+                }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Bride Registration</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Bride Registration
+              </label>
               <input
                 type="date"
                 value={formData.bride_registration_date}
-                onChange={(e) => setFormData({ ...formData, bride_registration_date: e.target.value })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    bride_registration_date: e.target.value,
+                  })
+                }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Marriage Date</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Marriage Date
+            </label>
             <input
               type="date"
               value={formData.marriage_date}
-              onChange={(e) => setFormData({ ...formData, marriage_date: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, marriage_date: e.target.value })
+              }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             />
           </div>
@@ -255,7 +293,7 @@ const Testimonials = () => {
               type="submit"
               className="px-4 py-2 text-white bg-purple-600 rounded-lg hover:bg-purple-700"
             >
-              {selectedTestimonial ? 'Update' : 'Add'} Testimonial
+              {selectedTestimonial ? "Update" : "Add"} Testimonial
             </button>
           </div>
         </div>
