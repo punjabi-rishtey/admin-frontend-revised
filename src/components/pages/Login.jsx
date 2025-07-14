@@ -17,7 +17,7 @@
 
 //     try {
 //       const { data } = await adminApi.login(credentials);
-//       localStorage.setItem('adminToken', data.token);
+//       localStorage.setItem('token', data.token);
 //       setIsAuthenticated(true);
 //       navigate('/dashboard');
 //     } catch (err) {
