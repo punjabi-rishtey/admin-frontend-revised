@@ -19,6 +19,7 @@ const adminApi = {
   fetchUsers: async (filters) => {
     const status = filters.status === "all" ? "Total" : filters.status;
     const res = await axios.get(`${ADMIN_BASE}/users/${status}`, { headers });
+    console.log(res.data);
     return { users: res.data };
   },
 
@@ -207,6 +208,12 @@ const adminApi = {
 
   deleteReview: async (id) => {
     return await axios.delete(`${REVIEWS_BASE}/${id}`, { headers });
+  },
+
+  fetchAnalytics: async () => {
+    const res = await axios.get(`${ADMIN_BASE}/dashboard`, { headers });
+    console.log(res.data);
+    return { data: res.data };
   },
 };
 

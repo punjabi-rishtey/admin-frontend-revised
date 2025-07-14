@@ -27,7 +27,7 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem("adminToken");
+    const token = localStorage.getItem("token");
     setIsAuthenticated(!!token);
     setLoading(false);
   }, []);
@@ -78,6 +78,7 @@ function App() {
           <Route path="reviews" element={<Reviews />} />
           {/* <Route path="utility" element={<Utility />} /> */}
           <Route path="qr" element={<QRCode />} />
+          <Route path="*" element={<Navigate to="/dashboard" />} />
         </Route>
       </Routes>
     </Router>
