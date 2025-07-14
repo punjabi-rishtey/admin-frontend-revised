@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import LoadingSpinner from '../common/LoadingSpinner';
 import ConfirmDialog from '../common/ConfirmDialog';
-import adminApi from '../../services/adminApi';
+import adminApi from '../../services/api';
 
 const UserDetail = () => {
   const { id } = useParams();
@@ -23,8 +23,9 @@ const UserDetail = () => {
 
   const fetchUserDetails = async () => {
     try {
-      const { data } = await adminApi.fetchUserDetails(id);
-      setUser(data.user);
+      const data = await adminApi.fetchUserDetails(id);
+      setUser(data);
+      
     } catch (error) {
       console.error('Error fetching user details:', error);
     } finally {

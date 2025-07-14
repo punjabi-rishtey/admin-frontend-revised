@@ -1,11 +1,11 @@
 // components/pages/Messages.jsx
-import { useState, useEffect } from 'react';
-import { Plus, Trash2, MessageSquare, Clock } from 'lucide-react';
-import DataTable from '../common/DataTable';
-import ModalForm from '../common/ModalForm';
-import ConfirmDialog from '../common/ConfirmDialog';
-import LoadingSpinner from '../common/LoadingSpinner';
-import adminApi from '../../services/adminApi';
+import { useState, useEffect } from "react";
+import { Plus, Trash2, MessageSquare, Clock } from "lucide-react";
+import DataTable from "../common/DataTable";
+import ModalForm from "../common/ModalForm";
+import ConfirmDialog from "../common/ConfirmDialog";
+import LoadingSpinner from "../common/LoadingSpinner";
+import adminApi from "../../services/adminApi";
 
 const Messages = () => {
   const [messages, setMessages] = useState([]);
@@ -14,8 +14,8 @@ const Messages = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [formData, setFormData] = useState({
-    message: '',
-    expiresAt: ''
+    message: "",
+    expiresAt: "",
   });
 
   useEffect(() => {
@@ -24,10 +24,13 @@ const Messages = () => {
 
   const fetchMessages = async () => {
     try {
-      const { data } = await adminApi.fetchMessages();
-      setMessages(data.messages);
+      const {
+        data: { messages },
+      } = await adminApi.fetchMessages();
+      setMessages(messages);
     } catch (error) {
-      console.error('Error fetching messages:', error);
+      console.error("Error fetching messages:", error);
+      setMessages([]); // fallback to empty array to prevent crash
     } finally {
       setLoading(false);
     }
@@ -40,7 +43,7 @@ const Messages = () => {
       fetchMessages();
       handleCloseModal();
     } catch (error) {
-      console.error('Error creating message:', error);
+      console.error("Error creating message:", error);
     }
   };
 
@@ -50,63 +53,67 @@ const Messages = () => {
       fetchMessages();
       setShowDeleteDialog(false);
     } catch (error) {
-      console.error('Error deleting message:', error);
+      console.error("Error deleting message:", error);
     }
   };
 
   const handleCloseModal = () => {
     setShowModal(false);
     setFormData({
-      message: '',
-      expiresAt: ''
+      message: "",
+      expiresAt: "",
     });
   };
 
   const columns = [
     {
-      key: 'message',
-      label: 'Message',
+      key: "message",
+      label: "Message",
       render: (value) => (
         <div className="max-w-md">
           <p className="text-sm text-gray-900">{value}</p>
         </div>
-      )
+      ),
     },
     {
-      key: 'createdAt',
-      label: 'Created',
+      key: "createdAt",
+      label: "Created",
       sortable: true,
-      render: (value) => new Date(value).toLocaleDateString()
+      render: (value) => new Date(value).toLocaleDateString(),
     },
     {
-      key: 'expiresAt',
-      label: 'Expires',
+      key: "expiresAt",
+      label: "Expires",
       sortable: true,
       render: (value) => {
         const expiryDate = new Date(value);
         const isExpired = expiryDate < new Date();
         return (
-          <span className={isExpired ? 'text-red-600' : ''}>
+          <span className={isExpired ? "text-red-600" : ""}>
             {expiryDate.toLocaleDateString()}
-            {isExpired && ' (Expired)'}
+            {isExpired && " (Expired)"}
           </span>
         );
-      }
+      },
     },
     {
-      key: 'status',
-      label: 'Status',
+      key: "status",
+      label: "Status",
       render: (_, message) => {
         const isExpired = new Date(message.expiresAt) < new Date();
         return (
-          <span className={`px-2 py-1 text-xs rounded-full font-medium ${
-            isExpired ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-          }`}>
-            {isExpired ? 'Expired' : 'Active'}
+          <span
+            className={`px-2 py-1 text-xs rounded-full font-medium ${
+              isExpired
+                ? "bg-red-100 text-red-800"
+                : "bg-green-100 text-green-800"
+            }`}
+          >
+            {isExpired ? "Expired" : "Active"}
           </span>
         );
-      }
-    }
+      },
+    },
   ];
 
   const actions = (message) => (
@@ -141,9 +148,14 @@ const Messages = () => {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Active Messages</p>
+              <p className="text-sm font-medium text-gray-600">
+                Active Messages
+              </p>
               <p className="text-2xl font-bold text-gray-900 mt-1">
-                {messages.filter(m => new Date(m.expiresAt) > new Date()).length}
+                {
+                  messages.filter((m) => new Date(m.expiresAt) > new Date())
+                    .length
+                }
               </p>
             </div>
             <MessageSquare className="h-8 w-8 text-green-600" />
@@ -152,9 +164,14 @@ const Messages = () => {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Expired Messages</p>
+              <p className="text-sm font-medium text-gray-600">
+                Expired Messages
+              </p>
               <p className="text-2xl font-bold text-gray-900 mt-1">
-                {messages.filter(m => new Date(m.expiresAt) <= new Date()).length}
+                {
+                  messages.filter((m) => new Date(m.expiresAt) <= new Date())
+                    .length
+                }
               </p>
             </div>
             <Clock className="h-8 w-8 text-red-600" />
@@ -177,24 +194,32 @@ const Messages = () => {
       >
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Message</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Message
+            </label>
             <textarea
               required
               rows={4}
               value={formData.message}
-              onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, message: e.target.value })
+              }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               placeholder="Enter your broadcast message..."
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Expiry Date</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Expiry Date
+            </label>
             <input
               type="datetime-local"
               required
               value={formData.expiresAt}
-              onChange={(e) => setFormData({ ...formData, expiresAt: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, expiresAt: e.target.value })
+              }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               min={new Date().toISOString().slice(0, 16)}
             />

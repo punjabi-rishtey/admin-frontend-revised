@@ -1,19 +1,25 @@
 // App.jsx
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
-import Layout from './components/layout/Layout';
-import Login from './components/pages/Login';
-import Dashboard from './components/pages/Dashboard';
-import Users from './components/pages/Users';
-import UserDetail from './components/pages/UserDetail';
-import Testimonials from './components/pages/Testimonials';
-import Analytics from './components/pages/Analytics';
-import CustomerSupport from './components/pages/CustomerSupport';
-import PaymentRequests from './components/pages/PaymentRequests';
-import MembershipPlans from './components/pages/MembershipPlans';
-import Coupons from './components/pages/Coupons';
-import Messages from './components/pages/Messages';
-import Reviews from './components/pages/Reviews';
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
+import { useState, useEffect } from "react";
+import Layout from "./components/layout/Layout";
+import Login from "./components/pages/Login";
+import Dashboard from "./components/pages/Dashboard";
+import Users from "./components/pages/Users";
+import UserDetail from "./components/pages/UserDetail";
+import Testimonials from "./components/pages/Testimonials";
+import Analytics from "./components/pages/Analytics";
+import CustomerSupport from "./components/pages/CustomerSupport";
+import PaymentRequests from "./components/pages/PaymentRequests";
+import MembershipPlans from "./components/pages/MembershipPlans";
+import Coupons from "./components/pages/Coupons";
+import Messages from "./components/pages/Messages";
+import Reviews from "./components/pages/Reviews";
+import QRCode from "./components/pages/QRCode";
 // import Utility from './components/pages/Utility';
 
 function App() {
@@ -21,7 +27,7 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('adminToken');
+    const token = localStorage.getItem("adminToken");
     setIsAuthenticated(!!token);
     setLoading(false);
   }, []);
@@ -37,13 +43,27 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/login" element={
-          isAuthenticated ? <Navigate to="/dashboard" /> : <Login setIsAuthenticated={setIsAuthenticated} />
-        } />
-        
-        <Route path="/" element={
-          isAuthenticated ? <Layout setIsAuthenticated={setIsAuthenticated} /> : <Navigate to="/login" />
-        }>
+        <Route
+          path="/login"
+          element={
+            isAuthenticated ? (
+              <Navigate to="/dashboard" />
+            ) : (
+              <Login setIsAuthenticated={setIsAuthenticated} />
+            )
+          }
+        />
+
+        <Route
+          path="/"
+          element={
+            isAuthenticated ? (
+              <Layout setIsAuthenticated={setIsAuthenticated} />
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
+        >
           <Route index element={<Navigate to="/dashboard" />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="users" element={<Users />} />
@@ -57,6 +77,7 @@ function App() {
           <Route path="messages" element={<Messages />} />
           <Route path="reviews" element={<Reviews />} />
           {/* <Route path="utility" element={<Utility />} /> */}
+          <Route path="qr" element={<QRCode />} />
         </Route>
       </Routes>
     </Router>

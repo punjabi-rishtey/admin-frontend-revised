@@ -5,7 +5,7 @@ import { Eye, Trash2, RotateCcw, Filter, Download, ToggleLeft, ToggleRight } fro
 import DataTable from '../common/DataTable';
 import ConfirmDialog from '../common/ConfirmDialog';
 import LoadingSpinner from '../common/LoadingSpinner';
-import adminApi from '../../services/adminApi';
+import adminApi from '../../services/api';
 
 const Users = () => {
   const navigate = useNavigate();
@@ -22,8 +22,9 @@ const Users = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const { data } = await adminApi.fetchUsers(filters);
-      setUsers(data.users);
+      const { users } = await adminApi.fetchUsers(filters);
+      setUsers(users);
+
     } catch (error) {
       console.error('Error fetching users:', error);
     } finally {

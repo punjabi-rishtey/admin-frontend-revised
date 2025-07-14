@@ -1,10 +1,10 @@
 // components/pages/Reviews.jsx
-import { useState, useEffect } from 'react';
-import { Trash2, Star } from 'lucide-react';
-import DataTable from '../common/DataTable';
-import ConfirmDialog from '../common/ConfirmDialog';
-import LoadingSpinner from '../common/LoadingSpinner';
-import adminApi from '../../services/adminApi';
+import { useState, useEffect } from "react";
+import { Trash2, Star } from "lucide-react";
+import DataTable from "../common/DataTable";
+import ConfirmDialog from "../common/ConfirmDialog";
+import LoadingSpinner from "../common/LoadingSpinner";
+import adminApi from "../../services/api";
 
 const Reviews = () => {
   const [reviews, setReviews] = useState([]);
@@ -18,10 +18,10 @@ const Reviews = () => {
 
   const fetchReviews = async () => {
     try {
-      const { data } = await adminApi.fetchReviews();
-      setReviews(data.reviews);
+      const { reviews } = await adminApi.fetchReviews();
+      setReviews(reviews);
     } catch (error) {
-      console.error('Error fetching reviews:', error);
+      console.error("Error fetching reviews:", error);
     } finally {
       setLoading(false);
     }
@@ -33,7 +33,7 @@ const Reviews = () => {
       fetchReviews();
       setShowDeleteDialog(false);
     } catch (error) {
-      console.error('Error deleting review:', error);
+      console.error("Error deleting review:", error);
     }
   };
 
@@ -44,7 +44,7 @@ const Reviews = () => {
           <Star
             key={star}
             className={`h-4 w-4 ${
-              star <= rating ? 'text-yellow-400 fill-current' : 'text-gray-300'
+              star <= rating ? "text-yellow-400 fill-current" : "text-gray-300"
             }`}
           />
         ))}
@@ -54,31 +54,33 @@ const Reviews = () => {
 
   const columns = [
     {
-      key: 'user_name',
-      label: 'User',
-      sortable: true
+      key: "user_name",
+      label: "User",
+      sortable: true,
     },
     {
-      key: 'message',
-      label: 'Review',
+      key: "message",
+      label: "Review",
       render: (value) => (
         <div className="max-w-xs">
-          <p className="text-sm text-gray-900 truncate" title={value}>{value}</p>
+          <p className="text-sm text-gray-900 truncate" title={value}>
+            {value}
+          </p>
         </div>
-      )
+      ),
     },
     {
-      key: 'ratings',
-      label: 'Rating',
+      key: "ratings",
+      label: "Rating",
       sortable: true,
-      render: (value) => renderStars(value)
+      render: (value) => renderStars(value),
     },
     {
-      key: 'created_at',
-      label: 'Date',
+      key: "created_at",
+      label: "Date",
       sortable: true,
-      render: (value) => new Date(value).toLocaleDateString()
-    }
+      render: (value) => new Date(value).toLocaleDateString(),
+    },
   ];
 
   const actions = (review) => (
@@ -96,9 +98,12 @@ const Reviews = () => {
 
   if (loading) return <LoadingSpinner />;
 
-  const avgRating = reviews.length > 0
-    ? (reviews.reduce((sum, r) => sum + r.ratings, 0) / reviews.length).toFixed(1)
-    : 0;
+  const avgRating =
+    reviews.length > 0
+      ? (
+          reviews.reduce((sum, r) => sum + r.ratings, 0) / reviews.length
+        ).toFixed(1)
+      : 0;
 
   return (
     <div className="space-y-6">
@@ -109,7 +114,9 @@ const Reviews = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Total Reviews</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{reviews.length}</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">
+                {reviews.length}
+              </p>
             </div>
             <Star className="h-8 w-8 text-purple-600" />
           </div>
@@ -117,7 +124,9 @@ const Reviews = () => {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Average Rating</p>
+              <p className="text-sm font-medium text-gray-600">
+                Average Rating
+              </p>
               <div className="flex items-center space-x-2 mt-1">
                 <p className="text-2xl font-bold text-gray-900">{avgRating}</p>
                 {renderStars(Math.round(avgRating))}
@@ -127,11 +136,14 @@ const Reviews = () => {
         </div>
         <div className="bg-white rounded-lg shadow p-6">
           <div>
-            <p className="text-sm font-medium text-gray-600 mb-2">Rating Distribution</p>
+            <p className="text-sm font-medium text-gray-600 mb-2">
+              Rating Distribution
+            </p>
             {[5, 4, 3, 2, 1].map((rating) => {
-              const count = reviews.filter(r => r.ratings === rating).length;
-              const percentage = reviews.length > 0 ? (count / reviews.length) * 100 : 0;
-              
+              const count = reviews.filter((r) => r.ratings === rating).length;
+              const percentage =
+                reviews.length > 0 ? (count / reviews.length) * 100 : 0;
+
               return (
                 <div key={rating} className="flex items-center space-x-2 mb-1">
                   <span className="text-xs text-gray-600 w-3">{rating}</span>
@@ -199,13 +211,17 @@ const ReviewDetailModal = ({ review, onClose }) => {
             </div>
 
             <div>
-              <label className="text-sm font-medium text-gray-500">Rating</label>
+              <label className="text-sm font-medium text-gray-500">
+                Rating
+              </label>
               <div className="flex items-center space-x-1 mt-1">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <Star
                     key={star}
                     className={`h-5 w-5 ${
-                      star <= review.ratings ? 'text-yellow-400 fill-current' : 'text-gray-300'
+                      star <= review.ratings
+                        ? "text-yellow-400 fill-current"
+                        : "text-gray-300"
                     }`}
                   />
                 ))}
@@ -214,13 +230,17 @@ const ReviewDetailModal = ({ review, onClose }) => {
             </div>
 
             <div>
-              <label className="text-sm font-medium text-gray-500">Review</label>
+              <label className="text-sm font-medium text-gray-500">
+                Review
+              </label>
               <p className="text-gray-900 mt-1">{review.message}</p>
             </div>
 
             <div>
               <label className="text-sm font-medium text-gray-500">Date</label>
-              <p className="text-gray-900">{new Date(review.created_at).toLocaleString()}</p>
+              <p className="text-gray-900">
+                {new Date(review.created_at).toLocaleString()}
+              </p>
             </div>
 
             <div className="flex justify-end">
