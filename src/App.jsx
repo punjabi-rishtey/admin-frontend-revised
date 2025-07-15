@@ -81,7 +81,7 @@ function App() {
           {/* <Route path="utility" element={<Utility />} /> */}
           <Route path="qr" element={<QRCode />} />
           <Route path="add-user" element={<AddUser />} />
-          <Route path="edit-user/:id" element={<EditUserPage />} />
+          <Route path="users/edit-user/:id" element={<EditUserPage />} />
 
           <Route path="*" element={<Navigate to="/dashboard" />} />
         </Route>
