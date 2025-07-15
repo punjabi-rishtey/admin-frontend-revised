@@ -162,7 +162,7 @@ const UserDetail = () => {
             )}
 
             <a
-              href={`edit-user/${user._id}`}
+              href={`/edit-user/${user._id}`}
               className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
             >
               <Edit className="h-5 w-5 text-gray-600" />
