@@ -9,10 +9,12 @@ import {
   Download,
   ToggleLeft,
   ToggleRight,
+  UserPlus,
 } from "lucide-react";
 import DataTable from "../common/DataTable";
 import ConfirmDialog from "../common/ConfirmDialog";
 import LoadingSpinner from "../common/LoadingSpinner";
+import ApproveModal from "../common/ApproveModal";
 import adminApi from "../../services/api";
 
 const Users = () => {
@@ -21,6 +23,8 @@ const Users = () => {
   const [loading, setLoading] = useState(true);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
+  const [approveModalOpen, setApproveModalOpen] = useState(false);
+  const [userToApprove, setUserToApprove] = useState(null);
   const [filters, setFilters] = useState({
     status: "all",
     includeDeleted: false,
@@ -34,7 +38,12 @@ const Users = () => {
     setLoading(true);
     try {
       const { users } = await adminApi.fetchUsers(filters);
-      setUsers(users);
+      // setUsers(users);
+      const usersWithFlatDate = users.map((u) => ({
+        ...u,
+        register_date: u?.metadata?.register_date || null,
+      }));
+      setUsers(usersWithFlatDate);
     } catch (error) {
       console.error("Error fetching users:", error);
     } finally {
@@ -61,13 +70,12 @@ const Users = () => {
     }
   };
 
-  const handleToggleMembership = async (user) => {
-    try {
-      const newStatus = user.status === "Approved" ? "Expired" : "Approved";
-      await adminApi.updateUserStatus(user._id, newStatus);
-      fetchUsers();
-    } catch (error) {
-      console.error("Error toggling membership:", error);
+  const handleToggleMembership = (user) => {
+    if (user.status === "Approved") {
+      adminApi.updateUserStatus(user._id, "Expired").then(fetchUsers);
+    } else {
+      setUserToApprove(user);
+      setApproveModalOpen(true);
     }
   };
 
@@ -119,12 +127,26 @@ const Users = () => {
     },
     { key: "gender", label: "Gender", sortable: true },
     { key: "age", label: "Age", sortable: true },
+    // {
+    //   key: "metadata.register_date",
+    //   label: "Registered",
+    //   sortable: true,
+    //   render: (_, user) => {
+    //     const date = user?.metadata?.register_date;
+    //     if (!date) return "-";
+    //     return new Date(date).toLocaleDateString("en-IN", {
+    //       year: "numeric",
+    //       month: "short",
+    //       day: "numeric",
+    //     });
+    //   },
+    // },
     {
-      key: "metadata.register_date",
+      key: "register_date",
       label: "Registered",
       sortable: true,
       render: (_, user) => {
-        const date = user?.metadata?.register_date;
+        const date = user?.register_date;
         if (!date) return "-";
         return new Date(date).toLocaleDateString("en-IN", {
           year: "numeric",
@@ -202,10 +224,10 @@ const Users = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-gray-900">Users</h1>
-        <button className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+        {/* <button className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
           <Download className="h-4 w-4" />
           <span>Export</span>
-        </button>
+        </button> */}
       </div>
 
       <div className="bg-white rounded-lg shadow p-4">
@@ -237,6 +259,13 @@ const Users = () => {
             />
             <span className="text-sm text-gray-700">Show deleted users</span>
           </label>
+          <a
+            href="/add-user"
+            className="ml-auto mr-2 flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 "
+          >
+            <UserPlus className="h-4 w-4" />
+            <span>Add Users</span>
+          </a>
         </div>
       </div>
 
@@ -256,6 +285,25 @@ const Users = () => {
         onConfirm={handleDelete}
         title="Delete User"
         message={`Are you sure you want to delete ${userToDelete?.name}? This will soft delete the user and they can be restored later.`}
+      />
+      <ApproveModal
+        isOpen={approveModalOpen}
+        onClose={() => setApproveModalOpen(false)}
+        onConfirm={async (startDateIso, expiryMonths) => {
+          try {
+            await adminApi.approveUserWithDates(
+              userToApprove._id,
+              startDateIso,
+              expiryMonths
+            );
+            setApproveModalOpen(false);
+            setUserToApprove(null);
+            fetchUsers();
+          } catch (error) {
+            alert("Approval failed");
+            console.error(error);
+          }
+        }}
       />
     </div>
   );

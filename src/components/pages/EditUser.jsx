@@ -1,0 +1,1255 @@
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import {
+  ArrowLeft,
+  User,
+  Heart,
+  MapPin,
+  Briefcase,
+  GraduationCap,
+  Users,
+  Star,
+  Calendar,
+  Save,
+  X,
+  Lock,
+  ChevronDown,
+  ChevronUp,
+  Image,
+  Trash2,
+} from "lucide-react";
+import LoadingSpinner from "../common/LoadingSpinner";
+import adminApi from "../../services/api";
+
+const EditUserPage = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [passwordData, setPasswordData] = useState({ newPassword: "" });
+  const [formData, setFormData] = useState({
+    user: { profile_pictures: [] },
+    astrology: {},
+    education: {},
+    family: {},
+    profession: {},
+  });
+  const [expandedSections, setExpandedSections] = useState({
+    basic: true,
+    birth: true,
+    physical: true,
+    lifestyle: true,
+    location: true,
+    astrology: true,
+    education: true,
+    family: true,
+    profession: true,
+    photos: true,
+    password: true,
+  });
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(null);
+
+  useEffect(() => {
+    fetchUserDetails();
+  }, [id]);
+
+  const fetchUserDetails = async () => {
+    try {
+      setError("");
+      const data = await adminApi.fetchUserDetails(id);
+      setUser(data);
+      setFormData({
+        user: {
+          name: data.name || "",
+          email: data.email || "",
+          mobile: data.mobile || "",
+          gender: data.gender || "",
+          dob: data.dob || "",
+          religion: data.religion || "",
+          marital_status: data.marital_status || "",
+          height: data.height || "",
+          caste: data.caste || "",
+          language: data.language || "",
+          hobbies: data.hobbies?.join(", ") || "",
+          mangalik: data.mangalik || "false",
+          birth_details: data.birth_details || {
+            birth_time: "",
+            birth_place: "",
+          },
+          physical_attributes: data.physical_attributes || {
+            skin_tone: "",
+            body_type: "",
+            physical_disability: false,
+            disability_reason: "",
+          },
+          lifestyle: data.lifestyle || {
+            smoke: "no",
+            drink: "no",
+            veg_nonveg: "",
+            nri_status: false,
+          },
+          location: data.location || { city: "", address: "" },
+          profile_pictures: data.profile_pictures || [],
+        },
+        astrology: data.astrology || { rashi_nakshatra: "", gotra: "" },
+        education: data.education || {
+          education_level: "",
+          education_field: "",
+          school_details: { name: "", city: "" },
+          college_details: { name: "", city: "", passout_year: "" },
+        },
+        family: data.family || {
+          family_value: "",
+          family_type: "",
+          mother: { name: "", occupation: "" },
+          father: { name: "", occupation: "" },
+          siblings: { brother_count: 0, sister_count: 0 },
+        },
+        profession: data.profession || {
+          occupation: "",
+          work_address: { address: "", city: "" },
+        },
+      });
+    } catch (error) {
+      setError("Failed to load user details");
+      console.error("Error fetching user details:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleChange = (e, section, field, subSection) => {
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => {
+      if (subSection) {
+        return {
+          ...prev,
+          [section]: {
+            ...prev[section],
+            [subSection]: {
+              ...prev[section][subSection],
+              [field]: type === "checkbox" ? checked : value,
+            },
+          },
+        };
+      }
+      return {
+        ...prev,
+        [section]: {
+          ...prev[section],
+          [field]: type === "checkbox" ? checked : value,
+        },
+      };
+    });
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (!file.type.startsWith("image/")) {
+        setError("Please select a valid image file.");
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        // 5MB limit
+        setError("Image size must be less than 5MB.");
+        return;
+      }
+      setSelectedFile(file);
+      setPreviewUrl(URL.createObjectURL(file));
+      setError(null);
+    }
+  };
+
+  const handleImageUpload = async () => {
+    if (!selectedFile) {
+      setError("Please select an image to upload.");
+      return;
+    }
+    setLoading(true);
+    setError("");
+    setSuccess("");
+    try {
+      const imageUrl = await adminApi.uploadProfilePicture(id, selectedFile);
+      setFormData((prev) => ({
+        ...prev,
+        user: {
+          ...prev.user,
+          profile_pictures: [...prev.user.profile_pictures, imageUrl],
+        },
+      }));
+      setSuccess("Profile picture uploaded successfully!");
+      setSelectedFile(null);
+      setPreviewUrl(null);
+    } catch (error) {
+      setError("Failed to upload profile picture");
+      console.error("Error uploading profile picture:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeletePhoto = async (index) => {
+    setLoading(true);
+    setError("");
+    setSuccess("");
+    try {
+      const updatedPictures = formData.user.profile_pictures.filter(
+        (_, i) => i !== index
+      );
+      await adminApi.updateUserDetails(id, {
+        profile_pictures: updatedPictures,
+      });
+      setFormData((prev) => ({
+        ...prev,
+        user: { ...prev.user, profile_pictures: updatedPictures },
+      }));
+      setSuccess("Profile picture deleted successfully!");
+      setSelectedPhotoIndex(null);
+    } catch (error) {
+      setError("Failed to delete profile picture");
+      console.error("Error deleting profile picture:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePasswordChange = (e) => {
+    setPasswordData({ newPassword: e.target.value });
+  };
+
+  const toggleSection = (section) => {
+    setExpandedSections((prev) => ({
+      ...prev,
+      [section]: !prev[section],
+    }));
+  };
+
+  const handleSubmit = async (e, section, endpoint) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    setSuccess("");
+    try {
+      let dataToSend = formData[section];
+      if (section === "user") {
+        dataToSend = {
+          ...dataToSend,
+          hobbies: formData.user.hobbies
+            .split(",")
+            .map((h) => h.trim())
+            .filter((h) => h),
+        };
+      }
+      await adminApi.updateUserDetails(id, dataToSend, section);
+      setSuccess(
+        `${
+          section.charAt(0).toUpperCase() + section.slice(1)
+        } updated successfully!`
+      );
+    } catch (error) {
+      setError(`Failed to update ${section} details`);
+      console.error(`Error updating ${section}:`, error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePasswordSubmit = async (e) => {
+    e.preventDefault();
+    if (!passwordData.newPassword.trim()) {
+      setError("Please enter a new password.");
+      return;
+    }
+    const confirm = window.confirm(
+      `Are you sure you want to change the password for ${formData.user.name} to ${passwordData.newPassword}?`
+    );
+    if (!confirm) {
+      setPasswordData({ newPassword: "" });
+      return;
+    }
+    setLoading(true);
+    setError("");
+    setSuccess("");
+    try {
+      await adminApi.changeUserPassword(id, passwordData.newPassword);
+      setSuccess("Password changed successfully!");
+      setPasswordData({ newPassword: "" });
+    } catch (error) {
+      setError("Failed to change password");
+      console.error("Error changing password:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancel = () => {
+    navigate(`/users/${id}`);
+  };
+
+  if (loading) return <LoadingSpinner />;
+  if (!user)
+    return <div className="text-red-600 text-center">User not found</div>;
+
+  return (
+    <div className="min-h-screen bg-gray-100 p-4 sm:p-6 md:p-8">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Messages */}
+        {error && (
+          <div className="bg-red-100 text-red-700 p-4 rounded-lg">{error}</div>
+        )}
+        {success && (
+          <div className="bg-green-100 text-green-700 p-4 rounded-lg">
+            {success}
+          </div>
+        )}
+
+        {/* Header */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => navigate("/users")}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                aria-label="Back to users"
+              >
+                <ArrowLeft className="h-5 w-5 text-gray-600" />
+              </button>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+                Edit {user.name}'s Profile
+              </h1>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={(e) =>
+                  handleSubmit(e, "user", `/api/admin/auth/users/edit/${id}`)
+                }
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                disabled={loading}
+              >
+                <Save className="h-5 w-5" />
+                <span>Save</span>
+              </button>
+              <button
+                onClick={handleCancel}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                <X className="h-5 w-5" />
+                <span>Cancel</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Profile Photos */}
+        <ProfilePhotosSection
+          photos={formData.user.profile_pictures}
+          selectedPhotoIndex={selectedPhotoIndex}
+          setSelectedPhotoIndex={setSelectedPhotoIndex}
+          previewUrl={previewUrl}
+          handleFileChange={handleFileChange}
+          handleImageUpload={handleImageUpload}
+          handleDeletePhoto={handleDeletePhoto}
+          selectedFile={selectedFile}
+          isExpanded={expandedSections.photos}
+          toggleSection={() => toggleSection("photos")}
+        />
+
+        {/* Basic Information */}
+        <SectionCard
+          title="Basic Information"
+          icon={<User className="h-5 w-5 text-gray-600" />}
+          isExpanded={expandedSections.basic}
+          toggleSection={() => toggleSection("basic")}
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <InputField
+              label="Full Name"
+              name="name"
+              section="user"
+              value={formData.user.name}
+              onChange={(e) => handleChange(e, "user", "name")}
+              required
+            />
+            <InputField
+              label="Email"
+              name="email"
+              section="user"
+              type="email"
+              value={formData.user.email}
+              onChange={(e) => handleChange(e, "user", "email")}
+              required
+            />
+            <InputField
+              label="Mobile"
+              name="mobile"
+              section="user"
+              value={formData.user.mobile}
+              onChange={(e) => handleChange(e, "user", "mobile")}
+              required
+            />
+            <InputField
+              label="Gender"
+              name="gender"
+              section="user"
+              type="select"
+              value={formData.user.gender}
+              onChange={(e) => handleChange(e, "user", "gender")}
+              options={["", "male", "female"]}
+              required
+            />
+            <InputField
+              label="Date of Birth"
+              name="dob"
+              section="user"
+              type="date"
+              value={formData.user.dob}
+              onChange={(e) => handleChange(e, "user", "dob")}
+              required
+            />
+            <InputField
+              label="Religion"
+              name="religion"
+              section="user"
+              value={formData.user.religion}
+              onChange={(e) => handleChange(e, "user", "religion")}
+            />
+            <InputField
+              label="Caste"
+              name="caste"
+              section="user"
+              value={formData.user.caste}
+              onChange={(e) => handleChange(e, "user", "caste")}
+            />
+            <InputField
+              label="Height"
+              name="height"
+              section="user"
+              value={formData.user.height}
+              onChange={(e) => handleChange(e, "user", "height")}
+            />
+            <InputField
+              label="Language"
+              name="language"
+              section="user"
+              value={formData.user.language}
+              onChange={(e) => handleChange(e, "user", "language")}
+            />
+            <InputField
+              label="Marital Status"
+              name="marital_status"
+              section="user"
+              value={formData.user.marital_status}
+              onChange={(e) => handleChange(e, "user", "marital_status")}
+            />
+            <InputField
+              label="Mangalik"
+              name="mangalik"
+              section="user"
+              type="select"
+              value={formData.user.mangalik}
+              onChange={(e) => handleChange(e, "user", "mangalik")}
+              options={["false", "true"]}
+            />
+            <InputField
+              label="Hobbies"
+              name="hobbies"
+              section="user"
+              value={formData.user.hobbies}
+              onChange={(e) => handleChange(e, "user", "hobbies")}
+              placeholder="Comma-separated hobbies"
+            />
+          </div>
+          <button
+            onClick={(e) =>
+              handleSubmit(e, "user", `/api/admin/auth/users/edit/${id}`)
+            }
+            className="mt-6 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            Save Basic Info
+          </button>
+        </SectionCard>
+
+        {/* Birth Details */}
+        <SectionCard
+          title="Birth Details"
+          icon={<Calendar className="h-5 w-5 text-gray-600" />}
+          isExpanded={expandedSections.birth}
+          toggleSection={() => toggleSection("birth")}
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <InputField
+              label="Birth Time"
+              name="birth_time"
+              section="user"
+              subSection="birth_details"
+              value={formData.user.birth_details.birth_time}
+              onChange={(e) =>
+                handleChange(e, "user", "birth_time", "birth_details")
+              }
+            />
+            <InputField
+              label="Birth Place"
+              name="birth_place"
+              section="user"
+              subSection="birth_details"
+              value={formData.user.birth_details.birth_place}
+              onChange={(e) =>
+                handleChange(e, "user", "birth_place", "birth_details")
+              }
+            />
+          </div>
+          <button
+            onClick={(e) =>
+              handleSubmit(e, "user", `/api/admin/auth/users/edit/${id}`)
+            }
+            className="mt-6 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            Save Birth Details
+          </button>
+        </SectionCard>
+
+        {/* Physical Attributes */}
+        <SectionCard
+          title="Physical Attributes"
+          icon={<Heart className="h-5 w-5 text-gray-600" />}
+          isExpanded={expandedSections.physical}
+          toggleSection={() => toggleSection("physical")}
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <InputField
+              label="Skin Tone"
+              name="skin_tone"
+              section="user"
+              subSection="physical_attributes"
+              value={formData.user.physical_attributes.skin_tone}
+              onChange={(e) =>
+                handleChange(e, "user", "skin_tone", "physical_attributes")
+              }
+            />
+            <InputField
+              label="Body Type"
+              name="body_type"
+              section="user"
+              subSection="physical_attributes"
+              value={formData.user.physical_attributes.body_type}
+              onChange={(e) =>
+                handleChange(e, "user", "body_type", "physical_attributes")
+              }
+            />
+            <InputField
+              label="Physical Disability"
+              name="physical_disability"
+              section="user"
+              subSection="physical_attributes"
+              type="select"
+              value={formData.user.physical_attributes.physical_disability}
+              onChange={(e) =>
+                handleChange(
+                  e,
+                  "user",
+                  "physical_disability",
+                  "physical_attributes"
+                )
+              }
+              options={["false", "true"]}
+            />
+            <InputField
+              label="Disability Reason"
+              name="disability_reason"
+              section="user"
+              subSection="physical_attributes"
+              value={formData.user.physical_attributes.disability_reason}
+              onChange={(e) =>
+                handleChange(
+                  e,
+                  "user",
+                  "disability_reason",
+                  "physical_attributes"
+                )
+              }
+            />
+          </div>
+          <button
+            onClick={(e) =>
+              handleSubmit(e, "user", `/api/admin/auth/users/edit/${id}`)
+            }
+            className="mt-6 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            Save Physical Attributes
+          </button>
+        </SectionCard>
+
+        {/* Lifestyle */}
+        <SectionCard
+          title="Lifestyle"
+          icon={<Heart className="h-5 w-5 text-gray-600" />}
+          isExpanded={expandedSections.lifestyle}
+          toggleSection={() => toggleSection("lifestyle")}
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <InputField
+              label="Smoking"
+              name="smoke"
+              section="user"
+              subSection="lifestyle"
+              type="select"
+              value={formData.user.lifestyle.smoke}
+              onChange={(e) => handleChange(e, "user", "smoke", "lifestyle")}
+              options={["no", "yes"]}
+            />
+            <InputField
+              label="Drinking"
+              name="drink"
+              section="user"
+              subSection="lifestyle"
+              type="select"
+              value={formData.user.lifestyle.drink}
+              onChange={(e) => handleChange(e, "user", "drink", "lifestyle")}
+              options={["no", "yes"]}
+            />
+            <InputField
+              label="Diet"
+              name="veg_nonveg"
+              section="user"
+              subSection="lifestyle"
+              value={formData.user.lifestyle.veg_nonveg}
+              onChange={(e) =>
+                handleChange(e, "user", "veg_nonveg", "lifestyle")
+              }
+            />
+            <InputField
+              label="NRI Status"
+              name="nri_status"
+              section="user"
+              subSection="lifestyle"
+              type="select"
+              value={formData.user.lifestyle.nri_status}
+              onChange={(e) =>
+                handleChange(e, "user", "nri_status", "lifestyle")
+              }
+              options={["false", "true"]}
+            />
+          </div>
+          <button
+            onClick={(e) =>
+              handleSubmit(e, "user", `/api/admin/auth/users/edit/${id}`)
+            }
+            className="mt-6 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            Save Lifestyle
+          </button>
+        </SectionCard>
+
+        {/* Location */}
+        <SectionCard
+          title="Location"
+          icon={<MapPin className="h-5 w-5 text-gray-600" />}
+          isExpanded={expandedSections.location}
+          toggleSection={() => toggleSection("location")}
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <InputField
+              label="City"
+              name="city"
+              section="user"
+              subSection="location"
+              value={formData.user.location.city}
+              onChange={(e) => handleChange(e, "user", "city", "location")}
+            />
+            <InputField
+              label="Address"
+              name="address"
+              section="user"
+              subSection="location"
+              value={formData.user.location.address}
+              onChange={(e) => handleChange(e, "user", "address", "location")}
+            />
+          </div>
+          <button
+            onClick={(e) =>
+              handleSubmit(e, "user", `/api/admin/auth/users/edit/${id}`)
+            }
+            className="mt-6 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            Save Location
+          </button>
+        </SectionCard>
+
+        {/* Astrology */}
+        <SectionCard
+          title="Astrology"
+          icon={<Star className="h-5 w-5 text-gray-600" />}
+          isExpanded={expandedSections.astrology}
+          toggleSection={() => toggleSection("astrology")}
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <InputField
+              label="Rashi Nakshatra"
+              name="rashi_nakshatra"
+              section="astrology"
+              value={formData.astrology.rashi_nakshatra}
+              onChange={(e) => handleChange(e, "astrology", "rashi_nakshatra")}
+            />
+            <InputField
+              label="Gotra"
+              name="gotra"
+              section="astrology"
+              value={formData.astrology.gotra}
+              onChange={(e) => handleChange(e, "astrology", "gotra")}
+            />
+          </div>
+          <button
+            onClick={(e) =>
+              handleSubmit(e, "astrology", `/api/admin/auth/astrologies/${id}`)
+            }
+            className="mt-6 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            Save Astrology
+          </button>
+        </SectionCard>
+
+        {/* Education */}
+        <SectionCard
+          title="Education"
+          icon={<GraduationCap className="h-5 w-5 text-gray-600" />}
+          isExpanded={expandedSections.education}
+          toggleSection={() => toggleSection("education")}
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <InputField
+              label="Education Level"
+              name="education_level"
+              section="education"
+              value={formData.education.education_level}
+              onChange={(e) => handleChange(e, "education", "education_level")}
+            />
+            <InputField
+              label="Education Field"
+              name="education_field"
+              section="education"
+              value={formData.education.education_field}
+              onChange={(e) => handleChange(e, "education", "education_field")}
+            />
+            <div className="col-span-1 sm:col-span-2">
+              <h3 className="font-medium text-gray-700 mb-2">School Details</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pl-4">
+                <InputField
+                  label="School Name"
+                  name="name"
+                  section="education"
+                  subSection="school_details"
+                  value={formData.education.school_details.name}
+                  onChange={(e) =>
+                    handleChange(e, "education", "name", "school_details")
+                  }
+                />
+                <InputField
+                  label="School City"
+                  name="city"
+                  section="education"
+                  subSection="school_details"
+                  value={formData.education.school_details.city}
+                  onChange={(e) =>
+                    handleChange(e, "education", "city", "school_details")
+                  }
+                />
+              </div>
+            </div>
+            <div className="col-span-1 sm:col-span-2">
+              <h3 className="font-medium text-gray-700 mb-2">
+                College Details
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pl-4">
+                <InputField
+                  label="College Name"
+                  name="name"
+                  section="education"
+                  subSection="college_details"
+                  value={formData.education.college_details.name}
+                  onChange={(e) =>
+                    handleChange(e, "education", "name", "college_details")
+                  }
+                />
+                <InputField
+                  label="College City"
+                  name="city"
+                  section="education"
+                  subSection="college_details"
+                  value={formData.education.college_details.city}
+                  onChange={(e) =>
+                    handleChange(e, "education", "city", "college_details")
+                  }
+                />
+                <InputField
+                  label="Passout Year"
+                  name="passout_year"
+                  section="education"
+                  subSection="college_details"
+                  value={formData.education.college_details.passout_year}
+                  onChange={(e) =>
+                    handleChange(
+                      e,
+                      "education",
+                      "passout_year",
+                      "college_details"
+                    )
+                  }
+                />
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={(e) =>
+              handleSubmit(e, "education", `/api/admin/auth/educations/${id}`)
+            }
+            className="mt-6 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            Save Education
+          </button>
+        </SectionCard>
+
+        {/* Family */}
+        <SectionCard
+          title="Family"
+          icon={<Users className="h-5 w-5 text-gray-600" />}
+          isExpanded={expandedSections.family}
+          toggleSection={() => toggleSection("family")}
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <InputField
+              label="Family Value"
+              name="family_value"
+              section="family"
+              value={formData.family.family_value}
+              onChange={(e) => handleChange(e, "family", "family_value")}
+            />
+            <InputField
+              label="Family Type"
+              name="family_type"
+              section="family"
+              value={formData.family.family_type}
+              onChange={(e) => handleChange(e, "family", "family_type")}
+            />
+            <div className="col-span-1 sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <h3 className="font-medium text-gray-700 mb-2">
+                  Mother's Details
+                </h3>
+                <div className="space-y-4 pl-4">
+                  <InputField
+                    label="Name"
+                    name="name"
+                    section="family"
+                    subSection="mother"
+                    value={formData.family.mother.name}
+                    onChange={(e) =>
+                      handleChange(e, "family", "name", "mother")
+                    }
+                  />
+                  <InputField
+                    label="Occupation"
+                    name="occupation"
+                    section="family"
+                    subSection="mother"
+                    value={formData.family.mother.occupation}
+                    onChange={(e) =>
+                      handleChange(e, "family", "occupation", "mother")
+                    }
+                  />
+                </div>
+              </div>
+              <div>
+                <h3 className="font-medium text-gray-700 mb-2">
+                  Father's Details
+                </h3>
+                <div className="space-y-4 pl-4">
+                  <InputField
+                    label="Name"
+                    name="name"
+                    section="family"
+                    subSection="father"
+                    value={formData.family.father.name}
+                    onChange={(e) =>
+                      handleChange(e, "family", "name", "father")
+                    }
+                  />
+                  <InputField
+                    label="Occupation"
+                    name="occupation"
+                    section="family"
+                    subSection="father"
+                    value={formData.family.father.occupation}
+                    onChange={(e) =>
+                      handleChange(e, "family", "occupation", "father")
+                    }
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="col-span-1 sm:col-span-2">
+              <h3 className="font-medium text-gray-700 mb-2">Siblings</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pl-4">
+                <InputField
+                  label="Brother Count"
+                  name="brother_count"
+                  section="family"
+                  subSection="siblings"
+                  type="number"
+                  value={formData.family.siblings.brother_count}
+                  onChange={(e) =>
+                    handleChange(e, "family", "brother_count", "siblings")
+                  }
+                />
+                <InputField
+                  label="Sister Count"
+                  name="sister_count"
+                  section="family"
+                  subSection="siblings"
+                  type="number"
+                  value={formData.family.siblings.sister_count}
+                  onChange={(e) =>
+                    handleChange(e, "family", "sister_count", "siblings")
+                  }
+                />
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={(e) =>
+              handleSubmit(e, "family", `/api/admin/auth/families/${id}`)
+            }
+            className="mt-6 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            Save Family
+          </button>
+        </SectionCard>
+
+        {/* Profession */}
+        <SectionCard
+          title="Profession"
+          icon={<Briefcase className="h-5 w-5 text-gray-600" />}
+          isExpanded={expandedSections.profession}
+          toggleSection={() => toggleSection("profession")}
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <InputField
+              label="Occupation"
+              name="occupation"
+              section="profession"
+              value={formData.profession.occupation}
+              onChange={(e) => handleChange(e, "profession", "occupation")}
+            />
+            <InputField
+              label="Work Address"
+              name="address"
+              section="profession"
+              subSection="work_address"
+              value={formData.profession.work_address.address}
+              onChange={(e) =>
+                handleChange(e, "profession", "address", "work_address")
+              }
+            />
+            <InputField
+              label="Work City"
+              name="city"
+              section="profession"
+              subSection="work_address"
+              value={formData.profession.work_address.city}
+              onChange={(e) =>
+                handleChange(e, "profession", "city", "work_address")
+              }
+            />
+          </div>
+          <button
+            onClick={(e) =>
+              handleSubmit(e, "profession", `/api/admin/auth/professions/${id}`)
+            }
+            className="mt-6 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            Save Profession
+          </button>
+        </SectionCard>
+
+        {/* Password Reset */}
+        <SectionCard
+          title="Reset Password"
+          icon={<Lock className="h-5 w-5 text-gray-600" />}
+          isExpanded={expandedSections.password}
+          toggleSection={() => toggleSection("password")}
+        >
+          <form
+            onSubmit={handlePasswordSubmit}
+            className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+          >
+            <InputField
+              label="New Password"
+              name="newPassword"
+              section="password"
+              type="password"
+              value={passwordData.newPassword}
+              onChange={handlePasswordChange}
+              required
+            />
+            <div className="flex items-end gap-4">
+              <button
+                type="submit"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                disabled={loading || !passwordData.newPassword}
+              >
+                Submit Password
+              </button>
+              <button
+                onClick={() => setPasswordData({ newPassword: "" })}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </SectionCard>
+      </div>
+    </div>
+  );
+};
+
+const SectionCard = ({ title, icon, children, isExpanded, toggleSection }) => (
+  <div className="bg-white rounded-lg shadow">
+    <button
+      className="w-full flex items-center justify-between p-6 text-left"
+      onClick={toggleSection}
+    >
+      <div className="flex items-center gap-2">
+        {icon}
+        <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+      </div>
+      {isExpanded ? (
+        <ChevronUp className="h-5 w-5 text-gray-600" />
+      ) : (
+        <ChevronDown className="h-5 w-5 text-gray-600" />
+      )}
+    </button>
+    {isExpanded && <div className="p-6 pt-0">{children}</div>}
+  </div>
+);
+
+const InputField = ({
+  label,
+  name,
+  section,
+  subSection,
+  value,
+  onChange,
+  type = "text",
+  required = false,
+  options,
+}) => {
+  const inputId = subSection
+    ? `${section}_${subSection}_${name}`
+    : `${section}_${name}`;
+  return (
+    <div className="space-y-1">
+      <label htmlFor={inputId} className="text-sm font-medium text-gray-700">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+      {type === "select" ? (
+        <select
+          id={inputId}
+          name={name}
+          value={value}
+          onChange={onChange}
+          required={required}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          {options.map((option) => (
+            <option key={option} value={option}>
+              {option === ""
+                ? "Select"
+                : option === "true"
+                ? "Yes"
+                : option === "false"
+                ? "No"
+                : option}
+            </option>
+          ))}
+        </select>
+      ) : (
+        <input
+          id={inputId}
+          name={name}
+          type={type}
+          value={value}
+          onChange={onChange}
+          required={required}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      )}
+    </div>
+  );
+};
+
+const ProfilePhotosSection = ({
+  photos,
+  selectedPhotoIndex,
+  setSelectedPhotoIndex,
+  previewUrl,
+  handleFileChange,
+  handleImageUpload,
+  handleDeletePhoto,
+  selectedFile,
+  isExpanded,
+  toggleSection,
+}) => {
+  const defaultPhoto = "https://via.placeholder.com/150?text=No+Image";
+  const photoArray = photos && photos.length > 0 ? photos : [defaultPhoto];
+
+  return (
+    <div className="bg-white rounded-lg shadow">
+      <button
+        className="w-full flex items-center justify-between p-6 text-left"
+        onClick={toggleSection}
+      >
+        <div className="flex items-center gap-2">
+          <Image className="h-5 w-5 text-gray-600" />
+          <h2 className="text-lg font-semibold text-gray-900">
+            Profile Photos
+          </h2>
+        </div>
+        {isExpanded ? (
+          <ChevronUp className="h-5 w-5 text-gray-600" />
+        ) : (
+          <ChevronDown className="h-5 w-5 text-gray-600" />
+        )}
+      </button>
+      {isExpanded && (
+        <div className="p-6 pt-0">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            {/* Photo Gallery */}
+            <div>
+              <h3 className="text-sm font-medium text-gray-700 mb-2">
+                Photo Gallery
+              </h3>
+              <div className="grid grid-cols-2 gap-4">
+                {photoArray.map((photo, index) => (
+                  <div key={`photo_${index}`} className="relative">
+                    <img
+                      src={photo}
+                      alt={`Profile ${index + 1}`}
+                      className="h-32 w-full object-cover rounded-lg border border-gray-300 cursor-pointer hover:brightness-90"
+                      onClick={() => setSelectedPhotoIndex(index)}
+                    />
+                    {photo !== defaultPhoto && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeletePhoto(index);
+                        }}
+                        className="absolute top-2 right-2 bg-red-600 text-white p-1 rounded-full hover:bg-red-700 transition-colors"
+                        aria-label={`Delete photo ${index + 1}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+            {/* Upload Section */}
+            <div>
+              <h3 className="text-sm font-medium text-gray-700 mb-2">
+                Upload New Photo
+              </h3>
+              <input
+                id="photos_upload"
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              {previewUrl && (
+                <div className="mt-4">
+                  <h3 className="text-sm font-medium text-gray-700 mb-2">
+                    Preview
+                  </h3>
+                  <img
+                    src={previewUrl}
+                    alt="Preview"
+                    className="h-32 w-full object-cover rounded-lg border border-gray-300"
+                  />
+                </div>
+              )}
+              {selectedFile && (
+                <button
+                  onClick={handleImageUpload}
+                  className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                  disabled={loading}
+                >
+                  Upload Photo
+                </button>
+              )}
+            </div>
+          </div>
+          {/* Modal for Full-Size Image */}
+          {selectedPhotoIndex !== null && (
+            <div
+              className="fixed inset-0 bg-black/80 flex items-center justify-center z-50"
+              onClick={() => setSelectedPhotoIndex(null)}
+            >
+              <div
+                className="relative max-w-[90vw] max-h-[90vh]"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  className="absolute top-4 right-4 bg-gray-800 text-white p-2 rounded-full hover:bg-gray-900"
+                  onClick={() => setSelectedPhotoIndex(null)}
+                  aria-label="Close modal"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+                <img
+                  src={photoArray[selectedPhotoIndex]}
+                  alt={`Profile ${selectedPhotoIndex + 1}`}
+                  className="max-h-[80vh] max-w-[80vw] object-contain rounded-lg"
+                />
+                {photoArray.length > 1 && (
+                  <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2">
+                    <button
+                      className="bg-gray-800 text-white p-2 rounded-full hover:bg-gray-900"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedPhotoIndex((prev) =>
+                          prev === 0 ? photoArray.length - 1 : prev - 1
+                        );
+                      }}
+                      aria-label="Previous photo"
+                    >
+                      <ChevronDown className="h-5 w-5 transform rotate-90" />
+                    </button>
+                    <button
+                      className="bg-gray-800 text-white p-2 rounded-full hover:bg-gray-900"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedPhotoIndex((prev) =>
+                          prev === photoArray.length - 1 ? 0 : prev + 1
+                        );
+                      }}
+                      aria-label="Next photo"
+                    >
+                      <ChevronUp className="h-5 w-5 transform rotate-90" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default EditUserPage;

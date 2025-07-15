@@ -20,6 +20,8 @@ import Coupons from "./components/pages/Coupons";
 import Messages from "./components/pages/Messages";
 import Reviews from "./components/pages/Reviews";
 import QRCode from "./components/pages/QRCode";
+import AddUser from "./components/pages/AddUser";
+import EditUserPage from "./components/pages/EditUser";
 // import Utility from './components/pages/Utility';
 
 function App() {
@@ -78,6 +80,9 @@ function App() {
           <Route path="reviews" element={<Reviews />} />
           {/* <Route path="utility" element={<Utility />} /> */}
           <Route path="qr" element={<QRCode />} />
+          <Route path="add-user" element={<AddUser />} />
+          <Route path="edit-user/:id" element={<EditUserPage />} />
+
           <Route path="*" element={<Navigate to="/dashboard" />} />
         </Route>
       </Routes>
