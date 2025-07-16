@@ -66,9 +66,10 @@ const adminApi = {
     try {
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("upload_preset", "your_cloudinary_upload_preset");
+      formData.append("upload_preset", "unsigned");
+      formData.append("folder", "profile_test5");
       const cloudinaryResponse = await axios.post(
-        "https://api.cloudinary.com/v1_1/your_cloudinary_cloud_name/image/upload",
+        "https://api.cloudinary.com/v1_1/dkbzoosmm/image/upload",
         formData
       );
       const imageUrl = cloudinaryResponse.data.secure_url;
