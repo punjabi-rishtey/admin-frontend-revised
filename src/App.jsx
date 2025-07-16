@@ -49,7 +49,7 @@ function App() {
           path="/login"
           element={
             isAuthenticated ? (
-              <Navigate to="/dashboard" />
+              <Navigate to="/users" />
             ) : (
               <Login setIsAuthenticated={setIsAuthenticated} />
             )
@@ -66,7 +66,7 @@ function App() {
             )
           }
         >
-          <Route index element={<Navigate to="/dashboard" />} />
+          <Route index element={<Navigate to="/users" />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="users" element={<Users />} />
           <Route path="users/:id" element={<UserDetail />} />
@@ -83,7 +83,7 @@ function App() {
           <Route path="add-user" element={<AddUser />} />
           <Route path="edit-user/:id" element={<EditUserPage />} />
 
-          <Route path="*" element={<Navigate to="/dashboard" />} />
+          <Route path="*" element={<Navigate to="/users" />} />
         </Route>
       </Routes>
     </Router>

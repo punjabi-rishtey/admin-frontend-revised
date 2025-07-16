@@ -16,7 +16,7 @@ import {
 
 const Sidebar = () => {
   const menuItems = [
-    { path: "/dashboard", name: "Dashboard", icon: Home },
+    // { path: "/dashboard", name: "Dashboard", icon: Home },
     { path: "/users", name: "Users", icon: Users },
     { path: "/testimonials", name: "Testimonials", icon: Heart },
     { path: "/analytics", name: "Analytics", icon: BarChart2 },
