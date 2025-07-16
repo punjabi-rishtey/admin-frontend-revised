@@ -61,59 +61,9 @@ const EditUserPage = () => {
     try {
       setError("");
       const data = await adminApi.fetchUserDetails(id);
+      console.log(data);
       setUser(data);
-      setFormData({
-        user: {
-          name: data.name || "",
-          email: data.email || "",
-          mobile: data.mobile || "",
-          gender: data.gender || "",
-          dob: data.dob || "",
-          religion: data.religion || "",
-          marital_status: data.marital_status || "",
-          height: data.height || "",
-          caste: data.caste || "",
-          language: data.language || "",
-          hobbies: data.hobbies?.join(", ") || "",
-          mangalik: data.mangalik || "false",
-          birth_details: data.birth_details || {
-            birth_time: "",
-            birth_place: "",
-          },
-          physical_attributes: data.physical_attributes || {
-            skin_tone: "",
-            body_type: "",
-            physical_disability: false,
-            disability_reason: "",
-          },
-          lifestyle: data.lifestyle || {
-            smoke: "no",
-            drink: "no",
-            veg_nonveg: "",
-            nri_status: false,
-          },
-          location: data.location || { city: "", address: "" },
-          profile_pictures: data.profile_pictures || [],
-        },
-        astrology: data.astrology || { rashi_nakshatra: "", gotra: "" },
-        education: data.education || {
-          education_level: "",
-          education_field: "",
-          school_details: { name: "", city: "" },
-          college_details: { name: "", city: "", passout_year: "" },
-        },
-        family: data.family || {
-          family_value: "",
-          family_type: "",
-          mother: { name: "", occupation: "" },
-          father: { name: "", occupation: "" },
-          siblings: { brother_count: 0, sister_count: 0 },
-        },
-        profession: data.profession || {
-          occupation: "",
-          work_address: { address: "", city: "" },
-        },
-      });
+      setFormData(normalizeUserData(data));
     } catch (error) {
       setError("Failed to load user details");
       console.error("Error fetching user details:", error);
@@ -399,7 +349,7 @@ const EditUserPage = () => {
               type="select"
               value={formData.user.gender}
               onChange={(e) => handleChange(e, "user", "gender")}
-              options={["", "male", "female"]}
+              options={selectOptions.gender}
               required
             />
             <InputField
@@ -415,15 +365,19 @@ const EditUserPage = () => {
               label="Religion"
               name="religion"
               section="user"
+              type="select"
               value={formData.user.religion}
               onChange={(e) => handleChange(e, "user", "religion")}
+              options={selectOptions.religion}
             />
             <InputField
               label="Caste"
               name="caste"
               section="user"
+              type="select"
               value={formData.user.caste}
               onChange={(e) => handleChange(e, "user", "caste")}
+              options={selectOptions.caste}
             />
             <InputField
               label="Height"
@@ -443,8 +397,10 @@ const EditUserPage = () => {
               label="Marital Status"
               name="marital_status"
               section="user"
+              type="select"
               value={formData.user.marital_status}
               onChange={(e) => handleChange(e, "user", "marital_status")}
+              options={selectOptions.marital_status}
             />
             <InputField
               label="Mangalik"
@@ -453,7 +409,7 @@ const EditUserPage = () => {
               type="select"
               value={formData.user.mangalik}
               onChange={(e) => handleChange(e, "user", "mangalik")}
-              options={["false", "true"]}
+              options={selectOptions.mangalik}
             />
             <InputField
               label="Hobbies"
@@ -526,20 +482,24 @@ const EditUserPage = () => {
               name="skin_tone"
               section="user"
               subSection="physical_attributes"
+              type="select"
               value={formData.user.physical_attributes.skin_tone}
               onChange={(e) =>
                 handleChange(e, "user", "skin_tone", "physical_attributes")
               }
+              options={selectOptions.skin_tone}
             />
             <InputField
               label="Body Type"
               name="body_type"
               section="user"
               subSection="physical_attributes"
+              type="select"
               value={formData.user.physical_attributes.body_type}
               onChange={(e) =>
                 handleChange(e, "user", "body_type", "physical_attributes")
               }
+              options={selectOptions.body_type}
             />
             <InputField
               label="Physical Disability"
@@ -556,7 +516,7 @@ const EditUserPage = () => {
                   "physical_attributes"
                 )
               }
-              options={["false", "true"]}
+              options={selectOptions.physical_disability}
             />
             <InputField
               label="Disability Reason"
@@ -600,7 +560,7 @@ const EditUserPage = () => {
               type="select"
               value={formData.user.lifestyle.smoke}
               onChange={(e) => handleChange(e, "user", "smoke", "lifestyle")}
-              options={["no", "yes"]}
+              options={selectOptions.smoke}
             />
             <InputField
               label="Drinking"
@@ -610,17 +570,19 @@ const EditUserPage = () => {
               type="select"
               value={formData.user.lifestyle.drink}
               onChange={(e) => handleChange(e, "user", "drink", "lifestyle")}
-              options={["no", "yes"]}
+              options={selectOptions.drink}
             />
             <InputField
               label="Diet"
               name="veg_nonveg"
               section="user"
               subSection="lifestyle"
+              type="select"
               value={formData.user.lifestyle.veg_nonveg}
               onChange={(e) =>
                 handleChange(e, "user", "veg_nonveg", "lifestyle")
               }
+              options={selectOptions.veg_nonveg}
             />
             <InputField
               label="NRI Status"
@@ -632,7 +594,7 @@ const EditUserPage = () => {
               onChange={(e) =>
                 handleChange(e, "user", "nri_status", "lifestyle")
               }
-              options={["false", "true"]}
+              options={selectOptions.nri_status}
             />
           </div>
           <button
@@ -725,15 +687,19 @@ const EditUserPage = () => {
               label="Education Level"
               name="education_level"
               section="education"
+              type="select"
               value={formData.education.education_level}
               onChange={(e) => handleChange(e, "education", "education_level")}
+              options={selectOptions.education_level}
             />
             <InputField
               label="Education Field"
               name="education_field"
               section="education"
+              type="select"
               value={formData.education.education_field}
               onChange={(e) => handleChange(e, "education", "education_field")}
+              options={selectOptions.education_field}
             />
             <div className="col-span-1 sm:col-span-2">
               <h3 className="font-medium text-gray-700 mb-2">School Details</h3>
@@ -825,15 +791,19 @@ const EditUserPage = () => {
               label="Family Value"
               name="family_value"
               section="family"
+              type="select"
               value={formData.family.family_value}
               onChange={(e) => handleChange(e, "family", "family_value")}
+              options={selectOptions.family_value}
             />
             <InputField
               label="Family Type"
               name="family_type"
               section="family"
+              type="select"
               value={formData.family.family_type}
               onChange={(e) => handleChange(e, "family", "family_type")}
+              options={selectOptions.family_type}
             />
             <div className="col-span-1 sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
@@ -1037,6 +1007,231 @@ const SectionCard = ({ title, icon, children, isExpanded, toggleSection }) => (
   </div>
 );
 
+const selectOptions = {
+  gender: [
+    { value: "", label: "Select value" },
+    { value: "male", label: "Male" },
+    { value: "female", label: "Female" },
+  ],
+  religion: [
+    { value: "", label: "Select value" },
+    { value: "hindu", label: "Hindu" },
+    { value: "sikh", label: "Sikh" },
+    { value: "jain", label: "Jain" },
+    { value: "buddhist", label: "Buddhist" },
+  ],
+  marital_status: [
+    { value: "", label: "Select value" },
+    { value: "never_married", label: "Never Married" },
+    { value: "divorced", label: "Divorced" },
+    { value: "widow_widower", label: "Widow/Widower" },
+    { value: "awaiting_divorce", label: "Awaiting Divorce" },
+  ],
+  caste: [
+    { value: "", label: "Select value" },
+    { value: "khatri", label: "Khatri" },
+    { value: "arora", label: "Arora" },
+    { value: "brahmin", label: "Brahmin" },
+    { value: "other", label: "Other" },
+  ],
+  mangalik: [
+    { value: "", label: "Select value" },
+    { value: "non_manglik", label: "Non Manglik" },
+    { value: "manglik", label: "Manglik" },
+    { value: "partial_manglik", label: "Partial Manglik" },
+  ],
+  family_value: [
+    { value: "", label: "Select value" },
+    { value: "orthodox", label: "Orthodox" },
+    { value: "traditional", label: "Traditional" },
+    { value: "liberal", label: "Liberal" },
+    { value: "modern", label: "Modern" },
+  ],
+  family_type: [
+    { value: "", label: "Select value" },
+    { value: "nuclear", label: "Nuclear Family" },
+    { value: "joint", label: "Joint Family" },
+    { value: "extended", label: "Extended Family" },
+    { value: "living_alone", label: "Living Alone" },
+  ],
+  education_level: [
+    { value: "", label: "Select value" },
+    { value: "high_school", label: "High School" },
+    { value: "undergraduate", label: "Undergraduate" },
+    { value: "graduate", label: "Graduate" },
+    { value: "post_graduate", label: "Post Graduate" },
+    { value: "doctorate", label: "Doctorate" },
+  ],
+  education_field: [
+    { value: "", label: "Select value" },
+    { value: "engineering", label: "Engineering" },
+    { value: "medical", label: "Medical" },
+    { value: "commerce", label: "Commerce" },
+    { value: "arts", label: "Arts" },
+    { value: "science", label: "Science" },
+    { value: "other", label: "Other" },
+  ],
+  skin_tone: [
+    { value: "", label: "Select value" },
+    { value: "very_fair", label: "Very Fair" },
+    { value: "fair", label: "Fair" },
+    { value: "wheatish", label: "Wheatish" },
+    { value: "dark", label: "Dark" },
+  ],
+  body_type: [
+    { value: "", label: "Select value" },
+    { value: "slim", label: "Slim" },
+    { value: "athletic", label: "Athletic" },
+    { value: "average", label: "Average" },
+    { value: "heavy", label: "Heavy" },
+  ],
+  physical_disability: [
+    { value: "", label: "Select value" },
+    { value: "false", label: "No" },
+    { value: "true", label: "Yes" },
+  ],
+  smoke: [
+    { value: "", label: "Select value" },
+    { value: "no", label: "No" },
+    { value: "yes", label: "Yes" },
+    { value: "occasionally", label: "Occasionally" },
+  ],
+  drink: [
+    { value: "", label: "Select value" },
+    { value: "no", label: "No" },
+    { value: "yes", label: "Yes" },
+    { value: "occasionally", label: "Occasionally" },
+  ],
+  veg_nonveg: [
+    { value: "", label: "Select value" },
+    { value: "veg", label: "Vegetarian" },
+    { value: "nonveg", label: "Non-Vegetarian" },
+    { value: "occasionally_nonveg", label: "Occasionally Non-Vegetarian" },
+  ],
+  nri_status: [
+    { value: "", label: "Select value" },
+    { value: "false", label: "No" },
+    { value: "true", label: "Yes" },
+  ],
+};
+
+// Utility to normalize backend data for form fields
+const normalizeUserData = (data) => {
+  // Helper for select fields
+  const normalize = (val, options) => {
+    if (val === undefined || val === null) return "";
+    // Try to match by value (case-insensitive)
+    const found = options.find(
+      (opt) => String(opt.value).toLowerCase() === String(val).toLowerCase()
+    );
+    if (found) return found.value;
+    // Try to match by label (case-insensitive)
+    const foundByLabel = options.find(
+      (opt) => String(opt.label).toLowerCase() === String(val).toLowerCase()
+    );
+    if (foundByLabel) return foundByLabel.value;
+    // Special case for mangalik (e.g. "Non manglik" -> "non_manglik")
+    if (options === selectOptions.mangalik && typeof val === "string") {
+      if (val.toLowerCase().includes("non")) return "non_manglik";
+      if (val.toLowerCase().includes("partial")) return "partial_manglik";
+      if (val.toLowerCase().includes("manglik")) return "manglik";
+    }
+    // For booleans
+    if (typeof val === "boolean") return val ? "true" : "false";
+    return "";
+  };
+
+  return {
+    user: {
+      name: data.name || "",
+      email: data.email || "",
+      mobile: data.mobile || "",
+      gender: normalize(data.gender, selectOptions.gender),
+      dob: data.dob || "",
+      religion: normalize(data.religion, selectOptions.religion),
+      marital_status: normalize(
+        data.marital_status,
+        selectOptions.marital_status
+      ),
+      height: data.height || "",
+      caste: normalize(data.caste, selectOptions.caste),
+      language: data.language || "",
+      hobbies: Array.isArray(data.hobbies)
+        ? data.hobbies.join(", ")
+        : data.hobbies || "",
+      mangalik: normalize(data.mangalik, selectOptions.mangalik),
+      birth_details: data.birth_details || { birth_time: "", birth_place: "" },
+      physical_attributes: {
+        skin_tone: normalize(
+          data.physical_attributes?.skin_tone,
+          selectOptions.skin_tone
+        ),
+        body_type: normalize(
+          data.physical_attributes?.body_type,
+          selectOptions.body_type
+        ),
+        physical_disability: normalize(
+          data.physical_attributes?.physical_disability,
+          selectOptions.physical_disability
+        ),
+        disability_reason: data.physical_attributes?.disability_reason || "",
+      },
+      lifestyle: {
+        smoke: normalize(data.lifestyle?.smoke, selectOptions.smoke),
+        drink: normalize(data.lifestyle?.drink, selectOptions.drink),
+        veg_nonveg: normalize(
+          data.lifestyle?.veg_nonveg,
+          selectOptions.veg_nonveg
+        ),
+        nri_status: normalize(
+          data.lifestyle?.nri_status,
+          selectOptions.nri_status
+        ),
+      },
+      location: data.location || { city: "", address: "" },
+      profile_pictures: data.profile_pictures || [],
+    },
+    astrology: {
+      rashi_nakshatra: data.astrology?.rashi_nakshatra || "",
+      gotra: data.astrology?.gotra || "",
+    },
+    education: {
+      education_level: normalize(
+        data.education?.education_level,
+        selectOptions.education_level
+      ),
+      education_field: normalize(
+        data.education?.education_field,
+        selectOptions.education_field
+      ),
+      school_details: data.education?.school_details || { name: "", city: "" },
+      college_details: data.education?.college_details || {
+        name: "",
+        city: "",
+        passout_year: "",
+      },
+    },
+    family: {
+      family_value: normalize(
+        data.family?.family_value,
+        selectOptions.family_value
+      ),
+      family_type: normalize(
+        data.family?.family_type,
+        selectOptions.family_type
+      ),
+      mother: data.family?.mother || { name: "", occupation: "" },
+      father: data.family?.father || { name: "", occupation: "" },
+      siblings: data.family?.siblings || { brother_count: 0, sister_count: 0 },
+    },
+    profession: {
+      occupation: data.profession?.occupation || "",
+      work_address: data.profession?.work_address || { address: "", city: "" },
+    },
+  };
+};
+
+// Update InputField to support options as objects
 const InputField = ({
   label,
   name,
@@ -1065,17 +1260,12 @@ const InputField = ({
           required={required}
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
-          {options.map((option) => (
-            <option key={option} value={option}>
-              {option === ""
-                ? "Select"
-                : option === "true"
-                ? "Yes"
-                : option === "false"
-                ? "No"
-                : option}
-            </option>
-          ))}
+          {options &&
+            options.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
         </select>
       ) : (
         <input
@@ -1104,6 +1294,7 @@ const ProfilePhotosSection = ({
   isExpanded,
   toggleSection,
 }) => {
+  const [loading, setLoading] = useState(false);
   const defaultPhoto = "https://via.placeholder.com/150?text=No+Image";
   const photoArray = photos && photos.length > 0 ? photos : [defaultPhoto];
 
