@@ -12,7 +12,7 @@ import {
 import Chart from "../common/Chart";
 import StatCard from "../common/StatCard";
 import LoadingSpinner from "../common/LoadingSpinner";
-import adminApi from "../../services/adminApi";
+import adminApi from "../../services/api";
 
 const Analytics = () => {
   const [analytics, setAnalytics] = useState(null);
@@ -26,6 +26,7 @@ const Analytics = () => {
   const fetchAnalytics = async () => {
     try {
       const { data } = await adminApi.fetchAnalytics({ days: dateRange });
+      console.log(data);
       setAnalytics(data);
     } catch (error) {
       console.error("Error fetching analytics:", error);

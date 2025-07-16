@@ -155,16 +155,16 @@ const adminApi = {
   createTestimonial: async (formData) => {
     const form = new FormData();
     for (let key in formData) {
-      form.append(key, formData[key]);
+      if (key === "image_url" && formData[key] instanceof File) {
+        form.append("image", formData[key]);
+      } else if (key !== "image_url") {
+        form.append(key, formData[key]);
+      }
     }
-    if (formData.image_url instanceof File) {
-      form.append("image", formData.image_url);
-    }
-
     return await axios.post(`${TESTIMONIALS_BASE}/add`, form, {
       headers: {
         ...getAuthHeader(),
-        "Content-Type": "multipart/form-data",
+        // Let browser set Content-Type for FormData
       },
     });
   },
@@ -172,12 +172,12 @@ const adminApi = {
   updateTestimonial: async (id, formData) => {
     const form = new FormData();
     for (let key in formData) {
-      form.append(key, formData[key]);
+      if (key === "image_url" && formData[key] instanceof File) {
+        form.append("image", formData[key]);
+      } else if (key !== "image_url") {
+        form.append(key, formData[key]);
+      }
     }
-    if (formData.image_url instanceof File) {
-      form.append("image", formData.image_url);
-    }
-
     return await axios.put(`${TESTIMONIALS_BASE}/edit/${id}`, form, {
       headers: {
         ...getAuthHeader(),
@@ -289,7 +289,7 @@ const adminApi = {
     const res = await axios.get(`${MESSAGES_BASE}`, {
       headers: getAuthHeader(),
     });
-    return { data: { messages: res.data } };
+    return { messages: res.data };
   },
 
   createMessage: async (data) => {

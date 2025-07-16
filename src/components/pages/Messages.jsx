@@ -5,7 +5,7 @@ import DataTable from "../common/DataTable";
 import ModalForm from "../common/ModalForm";
 import ConfirmDialog from "../common/ConfirmDialog";
 import LoadingSpinner from "../common/LoadingSpinner";
-import adminApi from "../../services/adminApi";
+import adminApi from "../../services/api";
 
 const Messages = () => {
   const [messages, setMessages] = useState([]);
@@ -24,9 +24,7 @@ const Messages = () => {
 
   const fetchMessages = async () => {
     try {
-      const {
-        data: { messages },
-      } = await adminApi.fetchMessages();
+      const { messages } = await adminApi.fetchMessages();
       setMessages(messages);
     } catch (error) {
       console.error("Error fetching messages:", error);

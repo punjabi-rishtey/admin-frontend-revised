@@ -130,7 +130,7 @@ const Login = ({ setIsAuthenticated }) => {
       // optionally store user info: localStorage.setItem("adminUser", JSON.stringify(data.user));
 
       setIsAuthenticated(true);
-      navigate("/dashboard");
+      navigate("/users");
     } catch (err) {
       setError(err.message);
     } finally {
