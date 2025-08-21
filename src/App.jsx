@@ -22,6 +22,7 @@ import Reviews from "./components/pages/Reviews";
 import QRCode from "./components/pages/QRCode";
 import AddUser from "./components/pages/AddUser";
 import EditUserPage from "./components/pages/EditUser";
+import Requests from "./components/pages/Requests";
 // import Utility from './components/pages/Utility';
 
 function App() {
@@ -82,6 +83,7 @@ function App() {
           <Route path="qr" element={<QRCode />} />
           <Route path="add-user" element={<AddUser />} />
           <Route path="edit-user/:id" element={<EditUserPage />} />
+          <Route path="requests" element={<Requests />} />
 
           <Route path="*" element={<Navigate to="/users" />} />
         </Route>

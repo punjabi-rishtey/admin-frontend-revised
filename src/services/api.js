@@ -137,6 +137,16 @@ const adminApi = {
     );
   },
 
+  updateUserToPending: async (userId) => {
+    return await axios.put(
+      `${BASE_URL}/users/${userId}`,
+      { status: "Pending" },
+      {
+        headers: { ...getAuthHeader(), "Content-Type": "application/json" },
+      }
+    );
+  },
+
   rejectPayment: async (userId) => {
     const payload = { status: "Canceled" };
     return await axios.put(`${API_BASE_URL}/user/${userId}/profile`, payload, {

@@ -12,12 +12,14 @@ import {
   Star,
   Settings,
   QrCode,
+  Clock,
 } from "lucide-react";
 
 const Sidebar = () => {
   const menuItems = [
     // { path: "/dashboard", name: "Dashboard", icon: Home },
     { path: "/users", name: "Users", icon: Users },
+    { path: "/requests", name: "Requests", icon: Clock },
     { path: "/testimonials", name: "Testimonials", icon: Heart },
     { path: "/analytics", name: "Analytics", icon: BarChart2 },
     { path: "/support", name: "Support", icon: HelpCircle },
