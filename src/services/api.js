@@ -118,14 +118,18 @@ const adminApi = {
         {},
         { headers: getAuthHeader() }
       );
-    } else if (status === "Expired" || status === "Canceled") {
-      await axios.put(
-        `${API_BASE_URL}/users/block/${id}`,
-        {},
-        {
-          headers: getAuthHeader(),
-        }
-      );
+    } else if (status === "Expired") {
+      // Use profile update endpoint for Expired status
+      const payload = { status: "Expired" };
+      await axios.put(`${API_BASE_URL}/user/${id}/profile`, payload, {
+        headers: getAuthHeader(),
+      });
+    } else if (status === "Canceled") {
+      // Use profile update endpoint for Canceled status  
+      const payload = { status: "Canceled" };
+      await axios.put(`${API_BASE_URL}/user/${id}/profile`, payload, {
+        headers: getAuthHeader(),
+      });
     }
   },
 

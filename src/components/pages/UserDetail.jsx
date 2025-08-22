@@ -19,6 +19,7 @@ import {
   Trash2,
   RotateCcw,
   Camera,
+  ChevronDown,
 } from "lucide-react";
 import LoadingSpinner from "../common/LoadingSpinner";
 import ConfirmDialog from "../common/ConfirmDialog";
@@ -30,10 +31,23 @@ const UserDetail = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
 
   useEffect(() => {
     fetchUserDetails();
   }, [id]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showStatusDropdown && !event.target.closest('.status-dropdown-container')) {
+        setShowStatusDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showStatusDropdown]);
 
   const fetchUserDetails = async () => {
     try {
@@ -54,6 +68,37 @@ const UserDetail = () => {
     } catch (error) {
       console.error("Error toggling membership:", error);
     }
+  };
+
+  const handleStatusChange = async (newStatus) => {
+    if (newStatus === user.status) return;
+    
+    setUpdatingStatus(true);
+    try {
+      if (newStatus === "Pending") {
+        await adminApi.updateUserToPending(user._id);
+      } else {
+        await adminApi.updateUserStatus(user._id, newStatus);
+      }
+      fetchUserDetails();
+      setShowStatusDropdown(false);
+    } catch (error) {
+      console.error("Error updating status:", error);
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  const statusOptions = [
+    { value: "Pending", label: "Pending", color: "bg-yellow-100 text-yellow-800" },
+    { value: "Approved", label: "Approved", color: "bg-green-100 text-green-800" },
+    { value: "Expired", label: "Expired", color: "bg-red-100 text-red-800" },
+    { value: "Canceled", label: "Canceled", color: "bg-gray-100 text-gray-800" },
+  ];
+
+  const getStatusColor = (status) => {
+    const statusOption = statusOptions.find(option => option.value === status);
+    return statusOption ? statusOption.color : "bg-gray-100 text-gray-800";
   };
 
   const handleDelete = async () => {
@@ -109,19 +154,37 @@ const UserDetail = () => {
               </p>
 
               <div className="flex items-center space-x-4 mt-3">
-                <span
-                  className={`px-3 py-1 text-sm rounded-full font-medium ${
-                    user.status === "Approved"
-                      ? "bg-green-100 text-green-800"
-                      : user.status === "Pending"
-                      ? "bg-yellow-100 text-yellow-800"
-                      : user.status === "Expired"
-                      ? "bg-red-100 text-red-800"
-                      : "bg-gray-100 text-gray-800"
-                  }`}
-                >
-                  {user.status}
-                </span>
+                <div className="relative status-dropdown-container">
+                  <button
+                    onClick={() => setShowStatusDropdown(!showStatusDropdown)}
+                    disabled={updatingStatus || user.is_deleted}
+                    className={`flex items-center space-x-2 px-3 py-1 text-sm rounded-full font-medium transition-colors ${getStatusColor(user.status)} ${
+                      user.is_deleted ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-80 cursor-pointer'
+                    }`}
+                  >
+                    <span>{updatingStatus ? "Updating..." : user.status}</span>
+                    {!user.is_deleted && <ChevronDown className="h-3 w-3" />}
+                  </button>
+                  
+                  {showStatusDropdown && !user.is_deleted && (
+                    <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border z-50 min-w-[120px]">
+                      {statusOptions.map((option) => (
+                        <button
+                          key={option.value}
+                          onClick={() => handleStatusChange(option.value)}
+                          disabled={updatingStatus || option.value === user.status}
+                          className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors first:rounded-t-lg last:rounded-b-lg ${
+                            option.value === user.status ? 'opacity-50 cursor-not-allowed' : ''
+                          }`}
+                        >
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${option.color}`}>
+                            {option.label}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <span className="text-sm text-gray-500">
                   Registered:{" "}
                   {new Date(user.metadata?.register_date).toLocaleDateString()}
