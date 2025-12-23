@@ -46,6 +46,7 @@ const normalizeUserData = (data) => {
       mangalik: normalize(data.mangalik, selectOptions.mangalik),
       about_myself: data.about_myself ?? "",
       looking_for: data.looking_for ?? "",
+      secondary_contact: data.secondary_contact ?? "",
       birth_details: data.birth_details || { birth_time: "", birth_place: "" },
       physical_attributes: {
         skin_tone: normalize(
@@ -81,6 +82,8 @@ const normalizeUserData = (data) => {
       },
       location: data.location || { city: "", address: "" },
       profile_pictures: data.profile_pictures || [],
+      // profile_picture: explicit selection, fallback to first picture in array
+      profile_picture: data.profile_picture || (data.profile_pictures && data.profile_pictures.length > 0 ? data.profile_pictures[0] : ""),
     },
     astrology: {
       rashi_nakshatra: data.astrology?.rashi_nakshatra || "",

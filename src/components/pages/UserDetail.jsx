@@ -155,6 +155,21 @@ const UserDetail = () => {
               <ArrowLeft className="h-5 w-5 text-gray-600" />
             </button>
 
+            {/* Profile Picture */}
+            <div className="flex-shrink-0">
+              {(user.profile_picture || (user.profile_pictures && user.profile_pictures.length > 0)) ? (
+                <img
+                  src={user.profile_picture || user.profile_pictures[0]}
+                  alt={`${user.name}'s profile`}
+                  className="w-20 h-20 rounded-full object-cover border-4 border-purple-200"
+                />
+              ) : (
+                <div className="w-20 h-20 rounded-full bg-purple-100 flex items-center justify-center border-4 border-purple-200">
+                  <User className="h-10 w-10 text-purple-400" />
+                </div>
+              )}
+            </div>
+
             <div>
               <div className="flex items-center space-x-3">
                 <h1 className="text-2xl font-bold text-gray-900">
@@ -168,6 +183,7 @@ const UserDetail = () => {
               </div>
               <p className="text-gray-600 mt-1">
                 {user.email} • {user.mobile}
+                {user.secondary_contact && ` • ${user.secondary_contact}`}
               </p>
 
               <div className="flex items-center space-x-4 mt-3">
@@ -332,6 +348,10 @@ const UserDetail = () => {
           <InfoItem label="Marital Status" value={user.marital_status} />
           <InfoItem label="Mangalik" value={user.mangalik || "Not specified"} />
           <InfoItem label="Language" value={user.language || "Not specified"} />
+          <InfoItem
+            label="Secondary Contact"
+            value={user.secondary_contact || "Not specified"}
+          />
         </div>
         {user.hobbies && user.hobbies.length > 0 && (
           <div className="mt-4">

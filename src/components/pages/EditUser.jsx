@@ -177,6 +177,28 @@ const EditUserPage = () => {
     }
   };
 
+  const handleSetProfilePicture = async (imageUrl) => {
+    setLoading(true);
+    setError("");
+    setSuccess("");
+    try {
+      await adminApi.setProfilePicture(id, imageUrl);
+      setFormData((prev) => ({
+        ...prev,
+        user: {
+          ...prev.user,
+          profile_picture: imageUrl,
+        },
+      }));
+      setSuccess("Profile picture updated successfully!");
+    } catch (error) {
+      setError("Failed to set profile picture");
+      console.error("Error setting profile picture:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handlePasswordChange = (e) => {
     setPasswordData({ newPassword: e.target.value });
   };
@@ -319,12 +341,14 @@ const EditUserPage = () => {
         {/* Profile Photos */}
         <ProfilePhotosSection
           photos={formData.user.profile_pictures}
+          profilePicture={formData.user.profile_picture}
           selectedPhotoIndex={selectedPhotoIndex}
           setSelectedPhotoIndex={setSelectedPhotoIndex}
           previewUrl={previewUrl}
           handleFileChange={handleFileChange}
           handleImageUpload={handleImageUpload}
           handleDeletePhoto={handleDeletePhoto}
+          onSetProfilePicture={handleSetProfilePicture}
           selectedFile={selectedFile}
           isExpanded={expandedSections.photos}
           toggleSection={() => toggleSection("photos")}
@@ -362,6 +386,14 @@ const EditUserPage = () => {
               value={formData.user.mobile}
               onChange={(e) => handleChange(e, "user", "mobile")}
               required
+            />
+            <InputField
+              label="Secondary Contact"
+              name="secondary_contact"
+              section="user"
+              value={formData.user.secondary_contact}
+              onChange={(e) => handleChange(e, "user", "secondary_contact")}
+              placeholder="Alternate phone number"
             />
             <InputField
               label="Gender"

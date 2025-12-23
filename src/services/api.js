@@ -99,6 +99,17 @@ const adminApi = {
     return res.data;
   },
 
+  setProfilePicture: async (userId, imageUrl) => {
+    const res = await axios.put(
+      `${BASE_URL}/users/${userId}/set-profile-picture`,
+      { imageUrl },
+      {
+        headers: { ...getAuthHeader(), "Content-Type": "application/json" },
+      }
+    );
+    return res.data;
+  },
+
   deleteUser: async (id) => {
     await axios.delete(`${API_BASE_URL}/deleteuser/${id}`, {
       headers: getAuthHeader(),

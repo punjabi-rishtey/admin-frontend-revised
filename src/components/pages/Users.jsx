@@ -102,7 +102,19 @@ const Users = () => {
         </div>
       ),
     },
-    { key: "mobile", label: "Mobile", sortable: true },
+    {
+      key: "mobile",
+      label: "Contact",
+      sortable: true,
+      render: (value, user) => (
+        <div>
+          <div className="font-medium">{value}</div>
+          {user.secondary_contact && (
+            <div className="text-sm text-gray-500">{user.secondary_contact}</div>
+          )}
+        </div>
+      ),
+    },
     {
       key: "status",
       label: "Status",

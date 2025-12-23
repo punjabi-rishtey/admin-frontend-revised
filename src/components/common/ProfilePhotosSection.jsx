@@ -1,21 +1,36 @@
 import { useState } from "react";
-import { Image, ChevronUp, ChevronDown, Trash2, X } from "lucide-react";
+import { Image, ChevronUp, ChevronDown, Trash2, X, Star } from "lucide-react";
 
 const ProfilePhotosSection = ({
   photos,
+  profilePicture,
   selectedPhotoIndex,
   setSelectedPhotoIndex,
   previewUrl,
   handleFileChange,
   handleImageUpload,
   handleDeletePhoto,
+  onSetProfilePicture,
   selectedFile,
   isExpanded,
   toggleSection,
 }) => {
-  const [loading] = useState(false);
+  const [loading, setLoading] = useState(false);
   const defaultPhoto = "https://via.placeholder.com/150?text=No+Image";
   const photoArray = photos && photos.length > 0 ? photos : [defaultPhoto];
+
+  // Determine current profile picture (explicit or first in array)
+  const currentProfilePic = profilePicture || (photos && photos.length > 0 ? photos[0] : "");
+
+  const handleSetAsProfilePic = async (photoUrl) => {
+    if (!onSetProfilePicture) return;
+    setLoading(true);
+    try {
+      await onSetProfilePicture(photoUrl);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="bg-white rounded-lg shadow">
@@ -44,28 +59,57 @@ const ProfilePhotosSection = ({
                 Photo Gallery
               </h3>
               <div className="grid grid-cols-2 gap-4">
-                {photoArray.map((photo, index) => (
-                  <div key={`photo_${index}`} className="relative">
-                    <img
-                      src={photo}
-                      alt={`Profile ${index + 1}`}
-                      className="h-32 w-full object-cover rounded-lg border border-gray-300 cursor-pointer hover:brightness-90"
-                      onClick={() => setSelectedPhotoIndex(index)}
-                    />
-                    {photo !== defaultPhoto && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeletePhoto(index);
-                        }}
-                        className="absolute top-2 right-2 bg-red-600 text-white p-1 rounded-full hover:bg-red-700 transition-colors"
-                        aria-label={`Delete photo ${index + 1}`}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    )}
-                  </div>
-                ))}
+                {photoArray.map((photo, index) => {
+                  const isProfilePic = photo === currentProfilePic;
+                  return (
+                    <div key={`photo_${index}`} className="relative">
+                      <img
+                        src={photo}
+                        alt={`Profile ${index + 1}`}
+                        className={`h-32 w-full object-cover rounded-lg cursor-pointer hover:brightness-90 ${
+                          isProfilePic
+                            ? "ring-4 ring-purple-500 border-2 border-purple-500"
+                            : "border border-gray-300"
+                        }`}
+                        onClick={() => setSelectedPhotoIndex(index)}
+                      />
+                      {isProfilePic && (
+                        <div className="absolute top-2 left-2 bg-purple-600 text-white px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
+                          <Star className="h-3 w-3" />
+                          Profile
+                        </div>
+                      )}
+                      {photo !== defaultPhoto && (
+                        <div className="absolute top-2 right-2 flex gap-1">
+                          {!isProfilePic && onSetProfilePicture && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSetAsProfilePic(photo);
+                              }}
+                              disabled={loading}
+                              className="bg-purple-600 text-white p-1 rounded-full hover:bg-purple-700 transition-colors disabled:opacity-50"
+                              aria-label={`Set as profile picture`}
+                              title="Set as Profile Picture"
+                            >
+                              <Star className="h-4 w-4" />
+                            </button>
+                          )}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeletePhoto(index);
+                            }}
+                            className="bg-red-600 text-white p-1 rounded-full hover:bg-red-700 transition-colors"
+                            aria-label={`Delete photo ${index + 1}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
             {/* Upload Section */}
