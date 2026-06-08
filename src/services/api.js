@@ -65,27 +65,31 @@ const adminApi = {
   uploadProfilePicture: async (userId, file) => {
     try {
       const formData = new FormData();
-      formData.append("file", file);
-      formData.append("upload_preset", "unsigned");
-      formData.append("folder", "profile_test5");
-      const cloudinaryResponse = await axios.post(
-        "https://api.cloudinary.com/v1_1/dkbzoosmm/image/upload",
-        formData
-      );
-      const imageUrl = cloudinaryResponse.data.secure_url;
-      const response = await axios.put(
-        `${API_BASE_URL}/users/edit/${userId}`,
-        { profile_pictures: [imageUrl] },
+      formData.append("profile_pictures", file);
+      const response = await axios.post(
+        `${API_BASE_URL}/users/${userId}/profile-pictures`,
+        formData,
         {
-          headers: { ...getAuthHeader(), "Content-Type": "application/json" },
+          headers: getAuthHeader(),
         }
       );
-      return imageUrl;
+      return response.data;
     } catch (error) {
       throw new Error(
         error.response?.data?.message || "Failed to upload profile picture"
       );
     }
+  },
+
+  deleteProfilePicture: async (userId, imagePath) => {
+    const response = await axios.delete(
+      `${API_BASE_URL}/users/${userId}/profile-pictures`,
+      {
+        headers: { ...getAuthHeader(), "Content-Type": "application/json" },
+        data: { imagePath },
+      }
+    );
+    return response.data;
   },
 
   changeUserPassword: async (userId, newPassword) => {
@@ -105,7 +109,7 @@ const adminApi = {
     });
   },
 
-  restoreUser: async (id) => {
+  restoreUser: async () => {
     console.warn("Restore API not implemented.");
   },
 
@@ -342,17 +346,13 @@ const adminApi = {
 
   // USER CREATION
   createUser: async (formData) => {
-    try {
-      const res = await axios.post(`${BASE_URL}/users/register`, formData, {
-        headers: {
-          ...getAuthHeader(),
-          "Content-Type": "multipart/form-data",
-        },
-      });
-      return res.data;
-    } catch (error) {
-      throw error;
-    }
+    const res = await axios.post(`${BASE_URL}/users/register`, formData, {
+      headers: {
+        ...getAuthHeader(),
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    return res.data;
   },
 };
 

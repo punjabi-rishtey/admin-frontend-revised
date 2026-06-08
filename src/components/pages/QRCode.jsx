@@ -42,6 +42,9 @@ const QRCode = () => {
 
       const res = await fetch(`${API_URL}/upload`, {
         method: "POST",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
         body: formData,
       });
 

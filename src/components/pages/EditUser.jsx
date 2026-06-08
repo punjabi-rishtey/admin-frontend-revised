@@ -129,13 +129,19 @@ const EditUserPage = () => {
     setError("");
     setSuccess("");
     try {
-      const imageUrl = await adminApi.uploadProfilePicture(id, selectedFile);
+      const result = await adminApi.uploadProfilePicture(id, selectedFile);
+      const nextPictures = result.profile_pictures || [];
       setFormData((prev) => ({
         ...prev,
         user: {
           ...prev.user,
-          profile_pictures: [...prev.user.profile_pictures, imageUrl],
+          profile_pictures: nextPictures,
         },
+      }));
+      setUser((prev) => ({
+        ...prev,
+        profile_pictures: nextPictures,
+        profile_picture: result.profile_picture,
       }));
       setSuccess("Profile picture uploaded successfully!");
       setSelectedFile(null);
@@ -153,19 +159,17 @@ const EditUserPage = () => {
     setError("");
     setSuccess("");
     try {
-      const updatedPictures = formData.user.profile_pictures.filter(
-        (_, i) => i !== index
-      );
-      await adminApi.updateUserDetails(
-        id,
-        {
-          profile_pictures: updatedPictures,
-        },
-        "user"
-      );
+      const imagePath = formData.user.profile_pictures[index];
+      const result = await adminApi.deleteProfilePicture(id, imagePath);
+      const updatedPictures = result.profile_pictures || [];
       setFormData((prev) => ({
         ...prev,
         user: { ...prev.user, profile_pictures: updatedPictures },
+      }));
+      setUser((prev) => ({
+        ...prev,
+        profile_pictures: updatedPictures,
+        profile_picture: result.profile_picture,
       }));
       setSuccess("Profile picture deleted successfully!");
       setSelectedPhotoIndex(null);
@@ -196,6 +200,10 @@ const EditUserPage = () => {
     try {
       let dataToSend = formData[section];
       if (section === "user") {
+        const safeUserData = { ...dataToSend };
+        delete safeUserData.profile_pictures;
+        delete safeUserData.profile_picture;
+        delete safeUserData.profile_picture_assets;
         const mapTri = (val) =>
           val === ""
             ? null
@@ -205,7 +213,7 @@ const EditUserPage = () => {
             ? false
             : null;
         dataToSend = {
-          ...dataToSend,
+          ...safeUserData,
           hobbies: formData.user.hobbies
             .split(",")
             .map((h) => h.trim())
