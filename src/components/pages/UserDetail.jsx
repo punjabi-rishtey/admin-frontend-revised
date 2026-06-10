@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import LoadingSpinner from "../common/LoadingSpinner";
 import ConfirmDialog from "../common/ConfirmDialog";
+import ApproveModal from "../common/ApproveModal";
 import adminApi from "../../services/api";
 
 const UserDetail = () => {
@@ -33,6 +34,9 @@ const UserDetail = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [approveModalOpen, setApproveModalOpen] = useState(false);
+  const [statusConfirm, setStatusConfirm] = useState(null);
+  const [notice, setNotice] = useState(null);
 
   const fetchUserDetails = useCallback(async () => {
     try {
@@ -40,6 +44,10 @@ const UserDetail = () => {
       setUser(data);
     } catch (error) {
       console.error("Error fetching user details:", error);
+      setNotice({
+        type: "error",
+        message: "Could not load this user. Please try again.",
+      });
     } finally {
       setLoading(false);
     }
@@ -64,17 +72,47 @@ const UserDetail = () => {
   }, [showStatusDropdown]);
 
   const handleToggleMembership = async () => {
-    try {
-      const newStatus = user.status === "Approved" ? "Expired" : "Approved";
-      await adminApi.updateUserStatus(user._id, newStatus);
-      fetchUserDetails();
-    } catch (error) {
-      console.error("Error toggling membership:", error);
+    if (user.status === "Approved") {
+      setStatusConfirm({
+        type: "status",
+        status: "Expired",
+        title: "Expire Membership",
+        message: `Expire ${user.name}'s membership? They will no longer have active membership access.`,
+        confirmText: "Expire Membership",
+        confirmVariant: "danger",
+      });
+      return;
     }
+
+    setApproveModalOpen(true);
   };
 
   const handleStatusChange = async (newStatus) => {
     if (newStatus === user.status) return;
+
+    if (newStatus === "Approved") {
+      setShowStatusDropdown(false);
+      setApproveModalOpen(true);
+      return;
+    }
+
+    if (newStatus === "Expired" || newStatus === "Canceled") {
+      setShowStatusDropdown(false);
+      setStatusConfirm({
+        type: "status",
+        status: newStatus,
+        title:
+          newStatus === "Expired" ? "Expire Membership" : "Cancel Membership",
+        message:
+          newStatus === "Expired"
+            ? `Expire ${user.name}'s membership? They will no longer have active membership access.`
+            : `Cancel ${user.name}'s membership? Use this only when the account should no longer be active.`,
+        confirmText:
+          newStatus === "Expired" ? "Expire Membership" : "Cancel Membership",
+        confirmVariant: "danger",
+      });
+      return;
+    }
 
     setUpdatingStatus(true);
     try {
@@ -83,10 +121,20 @@ const UserDetail = () => {
       } else {
         await adminApi.updateUserStatus(user._id, newStatus);
       }
-      fetchUserDetails();
+      setNotice({
+        type: "success",
+        message: `${user.name} was moved to ${newStatus}.`,
+      });
+      await fetchUserDetails();
       setShowStatusDropdown(false);
     } catch (error) {
       console.error("Error updating status:", error);
+      setNotice({
+        type: "error",
+        message:
+          error.response?.data?.message ||
+          "Could not update this user's status. Please try again.",
+      });
     } finally {
       setUpdatingStatus(false);
     }
@@ -95,18 +143,22 @@ const UserDetail = () => {
   const statusOptions = [
     {
       value: "Pending",
-      label: "Pending",
+      label: "Move to Pending",
       color: "bg-yellow-100 text-yellow-800",
     },
     {
       value: "Approved",
-      label: "Approved",
+      label: "Approve Membership",
       color: "bg-green-100 text-green-800",
     },
-    { value: "Expired", label: "Expired", color: "bg-red-100 text-red-800" },
+    {
+      value: "Expired",
+      label: "Expire Membership",
+      color: "bg-red-100 text-red-800",
+    },
     {
       value: "Canceled",
-      label: "Canceled",
+      label: "Cancel Membership",
       color: "bg-gray-100 text-gray-800",
     },
   ];
@@ -125,20 +177,75 @@ const UserDetail = () => {
       navigate("/users");
     } catch (error) {
       console.error("Error deleting user:", error);
+      setNotice({
+        type: "error",
+        message:
+          error.response?.data?.message ||
+          "Could not deactivate this user. Please try again.",
+      });
     }
   };
 
   const handleRestore = async () => {
+    setStatusConfirm({
+      type: "restore",
+      title: "Restore User",
+      message: `Restore ${user.name}? Their previous status will be restored where possible.`,
+      confirmText: "Restore User",
+      confirmVariant: "success",
+    });
+  };
+
+  const handleConfirmStatusAction = async () => {
+    if (!statusConfirm) return;
+
+    setUpdatingStatus(true);
     try {
-      await adminApi.restoreUser(user._id);
-      fetchUserDetails();
+      if (statusConfirm.type === "restore") {
+        await adminApi.restoreUser(user._id);
+        setNotice({
+          type: "success",
+          message: `${user.name} was restored.`,
+        });
+      } else if (statusConfirm.status) {
+        await adminApi.updateUserStatus(user._id, statusConfirm.status);
+        setNotice({
+          type: "success",
+          message: `${user.name} was moved to ${statusConfirm.status}.`,
+        });
+      }
+
+      setStatusConfirm(null);
+      await fetchUserDetails();
     } catch (error) {
-      console.error("Error restoring user:", error);
+      console.error("Error updating user status:", error);
+      setNotice({
+        type: "error",
+        message:
+          error.response?.data?.message ||
+          "Could not update this user. Please try again.",
+      });
+    } finally {
+      setUpdatingStatus(false);
     }
+  };
+
+  const handleApproveMembership = async (startDateIso, expiryMonths) => {
+    await adminApi.approveUserWithDates(user._id, startDateIso, expiryMonths);
+    setNotice({
+      type: "success",
+      message: `${user.name}'s membership was approved.`,
+    });
+    setApproveModalOpen(false);
+    await fetchUserDetails();
   };
 
   if (loading) return <LoadingSpinner />;
   if (!user) return <div>User not found</div>;
+
+  const showExpiryDate =
+    ["Approved", "Expired", "Canceled"].includes(user.status) &&
+    user.metadata?.exp_date;
 
   // const profileCompletion = user.profileCompletion || 75; // Mock value for now
 
@@ -188,7 +295,7 @@ const UserDetail = () => {
                   </button>
 
                   {showStatusDropdown && !user.is_deleted && (
-                    <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border z-50 min-w-[120px]">
+                    <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border z-50 min-w-[220px]">
                       {statusOptions.map((option) => (
                         <button
                           key={option.value}
@@ -216,7 +323,7 @@ const UserDetail = () => {
                   Registered:{" "}
                   {new Date(user.metadata?.register_date).toLocaleDateString()}
                 </span>
-                {user.metadata?.exp_date && (
+                {showExpiryDate && (
                   <span className="text-sm text-gray-500">
                     Expires:{" "}
                     {new Date(user.metadata.exp_date).toLocaleDateString()}
@@ -233,30 +340,34 @@ const UserDetail = () => {
                 className="flex items-center space-x-2 px-4 py-2 rounded-lg border transition-colors hover:bg-gray-50"
                 title={
                   user.status === "Approved"
-                    ? "Deactivate Membership"
-                    : "Activate Membership"
+                    ? "Expire Membership"
+                    : "Approve Membership"
                 }
               >
                 {user.status === "Approved" ? (
                   <>
                     <ToggleRight className="h-5 w-5 text-green-600" />
-                    <span>Active</span>
+                    <span>Expire Membership</span>
                   </>
                 ) : (
                   <>
                     <ToggleLeft className="h-5 w-5 text-gray-400" />
-                    <span>Inactive</span>
+                    <span>Approve Membership</span>
                   </>
                 )}
               </button>
             )}
 
-            <a
-              href={`/edit-user/${user._id}`}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <Edit className="h-5 w-5 text-gray-600" />
-            </a>
+            {!user.is_deleted && (
+              <button
+                type="button"
+                onClick={() => navigate(`/edit-user/${user._id}`)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Edit User"
+              >
+                <Edit className="h-5 w-5 text-gray-600" />
+              </button>
+            )}
 
             {user.is_deleted ? (
               <button
@@ -292,6 +403,18 @@ const UserDetail = () => {
           </div>
         </div> */}
       </div>
+
+      {notice && (
+        <div
+          className={`rounded-lg border px-4 py-3 text-sm ${
+            notice.type === "success"
+              ? "border-green-200 bg-green-50 text-green-800"
+              : "border-red-200 bg-red-50 text-red-800"
+          }`}
+        >
+          {notice.message}
+        </div>
+      )}
 
       {/* Profile Pictures */}
       {user.profile_pictures && user.profile_pictures.length > 0 && (
@@ -699,7 +822,23 @@ const UserDetail = () => {
         onClose={() => setShowDeleteDialog(false)}
         onConfirm={handleDelete}
         title="Delete User"
-        message={`Are you sure you want to delete ${user.name}? This will soft delete the user and they can be restored later.`}
+        message={`Deactivate ${user.name}? They will be hidden from normal user lists, their membership will be canceled, and they can be restored later.`}
+        confirmText="Deactivate User"
+      />
+      <ConfirmDialog
+        isOpen={Boolean(statusConfirm)}
+        onClose={() => setStatusConfirm(null)}
+        onConfirm={handleConfirmStatusAction}
+        title={statusConfirm?.title}
+        message={statusConfirm?.message}
+        confirmText={statusConfirm?.confirmText}
+        confirmVariant={statusConfirm?.confirmVariant}
+      />
+      <ApproveModal
+        isOpen={approveModalOpen}
+        onClose={() => setApproveModalOpen(false)}
+        onConfirm={handleApproveMembership}
+        userName={user.name}
       />
     </div>
   );

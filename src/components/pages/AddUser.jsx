@@ -12,7 +12,6 @@ import {
   Mail,
   Lock,
   Heart,
-  FileText,
   AlertCircle,
 } from "lucide-react";
 import adminApi from "../../services/api";
@@ -114,7 +113,9 @@ const AddUser = () => {
       "dob",
       "religion",
       "marital_status",
-      //   "profile_pictures",
+      "preference1",
+      "preference2",
+      "preference3",
     ];
     for (const field of required) {
       if (!formData[field]) {
@@ -141,11 +142,21 @@ const AddUser = () => {
       return false;
     }
 
+    if (formData.about_myself.length > 300) {
+      setError("About Myself must be at most 300 characters");
+      return false;
+    }
+
+    if (formData.looking_for.length > 300) {
+      setError("I am looking for must be at most 300 characters");
+      return false;
+    }
+
     // Validate password length
-    // if (formData.password.length < 6) {
-    //   setError("Password must be at least 6 characters");
-    //   return false;
-    // }
+    if (formData.password.length < 6) {
+      setError("Password must be at least 6 characters");
+      return false;
+    }
 
     return true;
   };
@@ -166,9 +177,9 @@ const AddUser = () => {
 
       // Add basic required fields
       submitData.append("name", formData.name);
-      submitData.append("email", formData.email);
+      submitData.append("email", formData.email.trim().toLowerCase());
       submitData.append("password", formData.password);
-      submitData.append("mobile", formData.mobile);
+      submitData.append("mobile", formData.mobile.trim());
       submitData.append("gender", formData.gender);
       submitData.append("dob", formData.dob);
       submitData.append("religion", formData.religion);
@@ -224,15 +235,12 @@ const AddUser = () => {
       // Add nested data as JSON string
       submitData.append("userData", JSON.stringify(userData));
 
-      // Add preferences if any
-      const preferences = {};
-      if (formData.preference1) preferences.preference1 = formData.preference1;
-      if (formData.preference2) preferences.preference2 = formData.preference2;
-      if (formData.preference3) preferences.preference3 = formData.preference3;
-
-      if (Object.keys(preferences).length > 0) {
-        submitData.append("preferences", JSON.stringify(preferences));
-      }
+      const preferences = {
+        preference1: formData.preference1,
+        preference2: formData.preference2,
+        preference3: formData.preference3,
+      };
+      submitData.append("preferences", JSON.stringify(preferences));
 
       // Add profile pictures
       profilePictures.forEach((file) => {
@@ -247,7 +255,11 @@ const AddUser = () => {
         navigate("/users");
       }, 2000);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to create user");
+      setError(
+        err.response?.data?.message ||
+          err.response?.data?.error ||
+          "Failed to create user"
+      );
     } finally {
       setLoading(false);
     }
@@ -404,7 +416,7 @@ const AddUser = () => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 required
               >
-                <option value="">Select Status</option>
+                <option value="">Select Marital Status</option>
                 <option value="Never Married">Never Married</option>
                 <option value="Divorced">Divorced</option>
                 <option value="Widowed">Widowed</option>
@@ -767,16 +779,15 @@ const AddUser = () => {
         </div>
 
         {/* Preferences */}
-        {/* <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            <FileText className="inline h-5 w-5 mr-2 text-gray-600" />
-            Partner Preferences
+            Partner Preferences (Required)
           </h2>
 
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Preference 1
+                Preference 1 <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -785,12 +796,13 @@ const AddUser = () => {
                 onChange={handleInputChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 placeholder="e.g., Age range, height preference"
+                required
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Preference 2
+                Preference 2 <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -799,12 +811,13 @@ const AddUser = () => {
                 onChange={handleInputChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 placeholder="e.g., Education level, profession"
+                required
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Preference 3
+                Preference 3 <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -813,10 +826,11 @@ const AddUser = () => {
                 onChange={handleInputChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 placeholder="e.g., Family values, lifestyle"
+                required
               />
             </div>
           </div>
-        </div> */}
+        </div>
 
         {/* Profile Pictures */}
         <div className="bg-white rounded-lg shadow p-6">

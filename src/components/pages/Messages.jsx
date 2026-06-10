@@ -1,11 +1,24 @@
-// components/pages/Messages.jsx
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Plus, Trash2, MessageSquare, Clock } from "lucide-react";
 import DataTable from "../common/DataTable";
 import ModalForm from "../common/ModalForm";
 import ConfirmDialog from "../common/ConfirmDialog";
 import LoadingSpinner from "../common/LoadingSpinner";
 import adminApi from "../../services/api";
+
+const formatDateTime = (value) => {
+  if (!value) return "-";
+
+  const parsedDate = new Date(value);
+  if (Number.isNaN(parsedDate.getTime())) {
+    return "-";
+  }
+
+  return parsedDate.toLocaleString();
+};
+
+const getErrorMessage = (error, fallback) =>
+  error.response?.data?.message || error.response?.data?.error || fallback;
 
 const Messages = () => {
   const [messages, setMessages] = useState([]);
@@ -17,50 +30,94 @@ const Messages = () => {
     message: "",
     expiresAt: "",
   });
+  const [notice, setNotice] = useState(null);
+  const [formError, setFormError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
-  useEffect(() => {
-    fetchMessages();
-  }, []);
-
-  const fetchMessages = async () => {
+  const fetchMessages = useCallback(async () => {
     try {
-      const { messages } = await adminApi.fetchMessages();
-      setMessages(messages);
+      setLoading(true);
+      const { messages: loadedMessages } = await adminApi.fetchMessages();
+      setMessages(Array.isArray(loadedMessages) ? loadedMessages : []);
     } catch (error) {
-      console.error("Error fetching messages:", error);
-      setMessages([]); // fallback to empty array to prevent crash
+      setMessages([]);
+      setNotice({
+        type: "error",
+        message: getErrorMessage(
+          error,
+          "Unable to load broadcast messages right now."
+        ),
+      });
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      await adminApi.createMessage(formData);
-      fetchMessages();
-      handleCloseModal();
-    } catch (error) {
-      console.error("Error creating message:", error);
-    }
-  };
-
-  const handleDelete = async () => {
-    try {
-      await adminApi.deleteMessage(selectedMessage._id);
-      fetchMessages();
-      setShowDeleteDialog(false);
-    } catch (error) {
-      console.error("Error deleting message:", error);
-    }
-  };
+  useEffect(() => {
+    fetchMessages();
+  }, [fetchMessages]);
 
   const handleCloseModal = () => {
     setShowModal(false);
+    setFormError("");
     setFormData({
       message: "",
       expiresAt: "",
     });
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    const message = formData.message.trim();
+    if (!message) {
+      setFormError("Please enter the broadcast message.");
+      return;
+    }
+
+    if (!formData.expiresAt) {
+      setFormError("Please choose when the message should expire.");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      setFormError("");
+      await adminApi.createMessage({
+        message,
+        expiresAt: formData.expiresAt,
+      });
+      setNotice({ type: "success", message: "Broadcast message created." });
+      handleCloseModal();
+      await fetchMessages();
+    } catch (error) {
+      setFormError(
+        getErrorMessage(error, "Unable to create the broadcast message.")
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!selectedMessage?._id) return;
+
+    try {
+      setDeletingId(selectedMessage._id);
+      await adminApi.deleteMessage(selectedMessage._id);
+      setNotice({ type: "success", message: "Broadcast message deleted." });
+      setShowDeleteDialog(false);
+      setSelectedMessage(null);
+      await fetchMessages();
+    } catch (error) {
+      setNotice({
+        type: "error",
+        message: getErrorMessage(error, "Unable to delete this message."),
+      });
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   const columns = [
@@ -77,7 +134,7 @@ const Messages = () => {
       key: "createdAt",
       label: "Created",
       sortable: true,
-      render: (value) => new Date(value).toLocaleDateString(),
+      render: formatDateTime,
     },
     {
       key: "expiresAt",
@@ -85,11 +142,13 @@ const Messages = () => {
       sortable: true,
       render: (value) => {
         const expiryDate = new Date(value);
-        const isExpired = expiryDate < new Date();
+        const isExpired =
+          !Number.isNaN(expiryDate.getTime()) && expiryDate < new Date();
+
         return (
-          <span className={isExpired ? "text-red-600" : ""}>
-            {expiryDate.toLocaleDateString()}
-            {isExpired && " (Expired)"}
+          <span className={isExpired ? "text-red-600" : "text-gray-900"}>
+            {formatDateTime(value)}
+            {isExpired ? " (Expired)" : ""}
           </span>
         );
       },
@@ -98,7 +157,9 @@ const Messages = () => {
       key: "status",
       label: "Status",
       render: (_, message) => {
-        const isExpired = new Date(message.expiresAt) < new Date();
+        const isExpired =
+          message.expiresAt && new Date(message.expiresAt) < new Date();
+
         return (
           <span
             className={`px-2 py-1 text-xs rounded-full font-medium ${
@@ -116,18 +177,24 @@ const Messages = () => {
 
   const actions = (message) => (
     <button
-      onClick={(e) => {
-        e.stopPropagation();
+      onClick={(event) => {
+        event.stopPropagation();
         setSelectedMessage(message);
         setShowDeleteDialog(true);
       }}
       className="p-1 rounded hover:bg-gray-100"
+      title="Delete Message"
     >
       <Trash2 className="h-4 w-4 text-red-600" />
     </button>
   );
 
   if (loading) return <LoadingSpinner />;
+
+  const activeCount = messages.filter(
+    (message) => message.expiresAt && new Date(message.expiresAt) > new Date()
+  ).length;
+  const expiredCount = messages.length - activeCount;
 
   return (
     <div className="space-y-6">
@@ -142,6 +209,18 @@ const Messages = () => {
         </button>
       </div>
 
+      {notice && (
+        <div
+          className={`rounded-lg border px-4 py-3 text-sm ${
+            notice.type === "error"
+              ? "border-red-200 bg-red-50 text-red-700"
+              : "border-green-200 bg-green-50 text-green-700"
+          }`}
+        >
+          {notice.message}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
@@ -150,10 +229,7 @@ const Messages = () => {
                 Active Messages
               </p>
               <p className="text-2xl font-bold text-gray-900 mt-1">
-                {
-                  messages.filter((m) => new Date(m.expiresAt) > new Date())
-                    .length
-                }
+                {activeCount}
               </p>
             </div>
             <MessageSquare className="h-8 w-8 text-green-600" />
@@ -166,10 +242,7 @@ const Messages = () => {
                 Expired Messages
               </p>
               <p className="text-2xl font-bold text-gray-900 mt-1">
-                {
-                  messages.filter((m) => new Date(m.expiresAt) <= new Date())
-                    .length
-                }
+                {expiredCount}
               </p>
             </div>
             <Clock className="h-8 w-8 text-red-600" />
@@ -182,6 +255,7 @@ const Messages = () => {
         data={messages}
         actions={actions}
         searchPlaceholder="Search messages..."
+        defaultSort={{ key: "createdAt", direction: "desc" }}
       />
 
       <ModalForm
@@ -191,6 +265,12 @@ const Messages = () => {
         onSubmit={handleSubmit}
       >
         <div className="space-y-4">
+          {formError && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {formError}
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Message
@@ -199,8 +279,8 @@ const Messages = () => {
               required
               rows={4}
               value={formData.message}
-              onChange={(e) =>
-                setFormData({ ...formData, message: e.target.value })
+              onChange={(event) =>
+                setFormData({ ...formData, message: event.target.value })
               }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               placeholder="Enter your broadcast message..."
@@ -215,8 +295,8 @@ const Messages = () => {
               type="datetime-local"
               required
               value={formData.expiresAt}
-              onChange={(e) =>
-                setFormData({ ...formData, expiresAt: e.target.value })
+              onChange={(event) =>
+                setFormData({ ...formData, expiresAt: event.target.value })
               }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               min={new Date().toISOString().slice(0, 16)}
@@ -233,9 +313,10 @@ const Messages = () => {
             </button>
             <button
               type="submit"
-              className="px-4 py-2 text-white bg-purple-600 rounded-lg hover:bg-purple-700"
+              disabled={isSubmitting}
+              className="px-4 py-2 text-white bg-purple-600 rounded-lg hover:bg-purple-700 disabled:cursor-wait disabled:opacity-70"
             >
-              Create Message
+              {isSubmitting ? "Creating..." : "Create Message"}
             </button>
           </div>
         </div>
@@ -246,7 +327,8 @@ const Messages = () => {
         onClose={() => setShowDeleteDialog(false)}
         onConfirm={handleDelete}
         title="Delete Message"
-        message="Are you sure you want to delete this message? This action cannot be undone."
+        message="Delete this broadcast message? This action cannot be undone."
+        confirmText={deletingId ? "Deleting..." : "Delete Message"}
       />
     </div>
   );

@@ -1,39 +1,44 @@
-// components/pages/Dashboard.jsx
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   Users,
-  Heart,
-  DollarSign,
-  TrendingUp,
-  UserCheck,
-  UserX,
-  Clock,
   Award,
+  Clock,
+  Heart,
+  AlertCircle,
+  MessageSquare,
+  Ticket,
+  Star,
 } from "lucide-react";
 import StatCard from "../common/StatCard";
 import Chart from "../common/Chart";
 import LoadingSpinner from "../common/LoadingSpinner";
 import adminApi from "../../services/api";
 
+const getErrorMessage = (error, fallback) =>
+  error.response?.data?.message || error.response?.data?.error || fallback;
+
 const Dashboard = () => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const { data } = await adminApi.fetchAnalytics({ days: 30 });
+        setStats(data);
+        setErrorMessage("");
+      } catch (error) {
+        setErrorMessage(
+          getErrorMessage(error, "Unable to load dashboard insights.")
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchDashboardData();
   }, []);
-
-  const fetchDashboardData = async () => {
-    try {
-      const { data } = await adminApi.fetchAnalytics();
-      console.log(data);
-      setStats(data);
-    } catch (error) {
-      console.error("Error fetching dashboard data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (loading) return <LoadingSpinner />;
 
@@ -41,33 +46,35 @@ const Dashboard = () => {
     <div className="space-y-6">
       <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
 
+      {errorMessage && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {errorMessage}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
           title="Total Users"
           value={stats?.totalUsers || 0}
           icon={Users}
-          trend={stats?.userGrowth}
           color="purple"
         />
         <StatCard
-          title="Active Subscriptions"
+          title="Approved Profiles"
           value={stats?.approvedUsers || 0}
           icon={Award}
-          trend={stats?.subscriptionGrowth}
           color="green"
         />
         <StatCard
-          title="Monthly Revenue"
-          value={`₹${(stats?.monthlyRevenue || 0).toLocaleString("en-IN")}`}
-          icon={DollarSign}
-          trend={stats?.revenueGrowth}
-          color="blue"
+          title="Needs Review"
+          value={stats?.needsReviewUsers || 0}
+          icon={AlertCircle}
+          color="yellow"
         />
         <StatCard
-          title="Success Stories"
-          value={stats?.successStories || 0}
-          icon={Heart}
-          trend={stats?.storiesGrowth}
+          title="Expiring Soon"
+          value={stats?.expiringSubscriptions || 0}
+          icon={Clock}
           color="red"
         />
       </div>
@@ -80,10 +87,10 @@ const Dashboard = () => {
         />
         <Chart
           type="line"
-          title="Daily Signups (Last 30 Days)"
+          title="New Profiles (Last 30 Days)"
           data={stats?.signupData || []}
           dataKey="signups"
-          xKey="date"
+          xKey="label"
         />
       </div>
 
@@ -104,7 +111,21 @@ const Dashboard = () => {
                 <div
                   className="bg-purple-600 h-2 rounded-full"
                   style={{ width: `${stats?.avgProfileCompletion || 0}%` }}
-                ></div>
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3 text-sm text-gray-700">
+              <div className="rounded-lg bg-gray-50 p-3">
+                <div className="text-gray-500">Recent Approvals</div>
+                <div className="mt-1 text-lg font-semibold text-gray-900">
+                  {stats?.recentApprovals || 0}
+                </div>
+              </div>
+              <div className="rounded-lg bg-gray-50 p-3">
+                <div className="text-gray-500">Success Stories</div>
+                <div className="mt-1 text-lg font-semibold text-gray-900">
+                  {stats?.successStories || 0}
+                </div>
               </div>
             </div>
           </div>
@@ -112,25 +133,31 @@ const Dashboard = () => {
 
         <div className="bg-white rounded-lg shadow p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Recent Activity
+            Support Queue
           </h3>
           <div className="space-y-3">
-            <div className="flex items-center space-x-3">
-              <UserCheck className="h-5 w-5 text-green-500" />
-              <span className="text-sm text-gray-600">
-                {stats?.recentApprovals || 0} profiles approved today
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-600">Open Inquiries</span>
+              <span className="text-sm font-medium">
+                {stats?.openInquiries || 0}
               </span>
             </div>
-            <div className="flex items-center space-x-3">
-              <UserX className="h-5 w-5 text-red-500" />
-              <span className="text-sm text-gray-600">
-                {stats?.pendingProfiles || 0} profiles pending review
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-600">Replied</span>
+              <span className="text-sm font-medium">
+                {stats?.repliedInquiries || 0}
               </span>
             </div>
-            <div className="flex items-center space-x-3">
-              <Clock className="h-5 w-5 text-yellow-500" />
-              <span className="text-sm text-gray-600">
-                {stats?.expiringSubscriptions || 0} subscriptions expiring soon
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-600">Closed</span>
+              <span className="text-sm font-medium">
+                {stats?.closedInquiries || 0}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-600">Active Messages</span>
+              <span className="text-sm font-medium">
+                {stats?.activeMessages || 0}
               </span>
             </div>
           </div>
@@ -138,30 +165,48 @@ const Dashboard = () => {
 
         <div className="bg-white rounded-lg shadow p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Coupon Usage
+            Content & Offers
           </h3>
-          <div className="space-y-3">
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-600">Active Coupons</span>
-              <span className="text-sm font-medium">
-                {stats?.activeCoupons || 0}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-600">Used This Month</span>
-              <span className="text-sm font-medium">
-                {stats?.couponsUsedThisMonth || 0}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-600">Total Discount</span>
-              <span className="text-sm font-medium">
-                ₹{stats?.totalDiscountAmount || 0}
-              </span>
-            </div>
+          <div className="space-y-4">
+            <SummaryRow
+              icon={Heart}
+              label="Testimonials"
+              value={stats?.successStories || 0}
+            />
+            <SummaryRow
+              icon={Star}
+              label="Reviews"
+              value={stats?.reviewCount || 0}
+            />
+            <SummaryRow
+              icon={Ticket}
+              label="Active Coupons"
+              value={stats?.activeCoupons || 0}
+            />
+            <SummaryRow
+              icon={MessageSquare}
+              label="Broadcast Messages"
+              value={stats?.totalMessages || 0}
+            />
           </div>
         </div>
       </div>
+    </div>
+  );
+};
+
+const SummaryRow = ({ icon, label, value }) => {
+  const Icon = icon;
+
+  return (
+    <div className="flex items-center justify-between rounded-lg bg-gray-50 px-4 py-3">
+      <div className="flex items-center gap-3">
+        <div className="rounded-lg bg-white p-2 text-purple-600 shadow-sm">
+          <Icon className="h-4 w-4" />
+        </div>
+        <span className="text-sm text-gray-700">{label}</span>
+      </div>
+      <span className="text-sm font-semibold text-gray-900">{value}</span>
     </div>
   );
 };

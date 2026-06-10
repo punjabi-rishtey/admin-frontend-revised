@@ -1,65 +1,151 @@
 // components/pages/CustomerSupport.jsx
-import { useState, useEffect } from "react";
-import { Reply, Check, Clock, AlertCircle } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Reply, Check, Clock, AlertCircle, X } from "lucide-react";
 import DataTable from "../common/DataTable";
 import ModalForm from "../common/ModalForm";
 import LoadingSpinner from "../common/LoadingSpinner";
 import adminApi from "../../services/api";
 
+const statusConfig = {
+  open: { label: "Open", color: "bg-yellow-100 text-yellow-800", icon: Clock },
+  replied: { label: "Replied", color: "bg-blue-100 text-blue-800", icon: Reply },
+  closed: { label: "Closed", color: "bg-green-100 text-green-800", icon: Check },
+};
+
+const normalizeInquiry = (inquiry) => ({
+  ...inquiry,
+  status: statusConfig[inquiry.status] ? inquiry.status : "open",
+  replies: Array.isArray(inquiry.replies) ? inquiry.replies : [],
+});
+
+const formatDate = (value) => {
+  if (!value) return "-";
+  return new Date(value).toLocaleString();
+};
+
+const getErrorMessage = (error, fallback) =>
+  error.response?.data?.message || error.response?.data?.error || fallback;
+
 const CustomerSupport = () => {
   const [inquiries, setInquiries] = useState([]);
+  const [summaryCounts, setSummaryCounts] = useState({
+    open: 0,
+    replied: 0,
+    closed: 0,
+    total: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [selectedInquiry, setSelectedInquiry] = useState(null);
   const [showReplyModal, setShowReplyModal] = useState(false);
   const [replyMessage, setReplyMessage] = useState("");
   const [filter, setFilter] = useState("all");
+  const [notice, setNotice] = useState(null);
+  const [replyError, setReplyError] = useState("");
+  const [isReplying, setIsReplying] = useState(false);
+  const [closingId, setClosingId] = useState(null);
 
-  useEffect(() => {
-    fetchInquiries();
-  }, [filter]);
-
-  const fetchInquiries = async () => {
+  const fetchInquiries = useCallback(async () => {
     try {
-      const { inquiries } = await adminApi.fetchInquiries();
-
-      // Patch each inquiry with a default status for frontend logic
-      const inquiriesWithStatus = inquiries.map((inq) => ({
-        ...inq,
-        status: inq.status || "open", // default to 'open' if missing
-      }));
-
-      setInquiries(
+      setLoading(true);
+      const [filteredResponse, allResponse] = await Promise.all([
+        adminApi.fetchInquiries({ status: filter }),
         filter === "all"
-          ? inquiriesWithStatus
-          : inquiriesWithStatus.filter((i) => i.status === filter)
+          ? Promise.resolve(null)
+          : adminApi.fetchInquiries({ status: "all" }),
+      ]);
+
+      const filteredInquiries = (filteredResponse.inquiries || []).map(
+        normalizeInquiry
       );
+      const allInquiries =
+        filter === "all"
+          ? filteredInquiries
+          : (allResponse?.inquiries || []).map(normalizeInquiry);
+
+      setInquiries(filteredInquiries);
+      setSummaryCounts({
+        open: allInquiries.filter((inquiry) => inquiry.status === "open").length,
+        replied: allInquiries.filter((inquiry) => inquiry.status === "replied")
+          .length,
+        closed: allInquiries.filter((inquiry) => inquiry.status === "closed")
+          .length,
+        total: allInquiries.length,
+      });
     } catch (error) {
-      console.error("Error fetching inquiries:", error);
+      setNotice({
+        type: "error",
+        message: getErrorMessage(error, "Unable to load support inquiries."),
+      });
     } finally {
       setLoading(false);
     }
+  }, [filter]);
+
+  useEffect(() => {
+    fetchInquiries();
+  }, [fetchInquiries]);
+
+  const openReplyModal = (inquiry) => {
+    setSelectedInquiry(normalizeInquiry(inquiry));
+    setReplyMessage("");
+    setReplyError("");
+    setShowReplyModal(true);
   };
 
-  const handleReply = async (e) => {
-    e.preventDefault();
+  const closeReplyModal = () => {
+    setShowReplyModal(false);
+    setReplyMessage("");
+    setReplyError("");
+  };
+
+  const handleReply = async (event) => {
+    event.preventDefault();
+
+    if (!replyMessage.trim()) {
+      setReplyError("Please type a reply before sending.");
+      return;
+    }
+
     try {
-      await adminApi.replyToInquiry(selectedInquiry._id, {
-        message: replyMessage,
+      setIsReplying(true);
+      setReplyError("");
+      const response = await adminApi.replyToInquiry(selectedInquiry._id, {
+        message: replyMessage.trim(),
       });
-      setShowReplyModal(false);
-      setReplyMessage("");
-      fetchInquiries();
+      const updatedInquiry = normalizeInquiry(response.data.inquiry);
+
+      setSelectedInquiry(updatedInquiry);
+      setNotice({ type: "success", message: "Reply sent and saved." });
+      closeReplyModal();
+      await fetchInquiries();
     } catch (error) {
-      console.error("Error replying to inquiry:", error);
+      setReplyError(
+        getErrorMessage(error, "Unable to send the reply. Please try again.")
+      );
+    } finally {
+      setIsReplying(false);
     }
   };
 
   const handleClose = async (inquiryId) => {
     try {
-      await adminApi.closeInquiry(inquiryId);
-      fetchInquiries();
+      setClosingId(inquiryId);
+      const response = await adminApi.closeInquiry(inquiryId);
+      const updatedInquiry = normalizeInquiry(response.data.inquiry);
+
+      if (selectedInquiry?._id === inquiryId) {
+        setSelectedInquiry(updatedInquiry);
+      }
+
+      setNotice({ type: "success", message: "Inquiry closed." });
+      await fetchInquiries();
     } catch (error) {
-      console.error("Error closing inquiry:", error);
+      setNotice({
+        type: "error",
+        message: getErrorMessage(error, "Unable to close the inquiry."),
+      });
+    } finally {
+      setClosingId(null);
     }
   };
 
@@ -98,20 +184,15 @@ const CustomerSupport = () => {
       key: "status",
       label: "Status",
       render: (value) => {
-        const statusConfig = {
-          open: { color: "bg-yellow-100 text-yellow-800", icon: Clock },
-          replied: { color: "bg-blue-100 text-blue-800", icon: Reply },
-          closed: { color: "bg-green-100 text-green-800", icon: Check },
-        };
         const config = statusConfig[value] || statusConfig.open;
         const Icon = config.icon;
 
         return (
           <span
-            className={`px-2 py-1 text-xs rounded-full font-medium flex items-center space-x-1 ${config.color}`}
+            className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${config.color}`}
           >
             <Icon className="h-3 w-3" />
-            <span>{value}</span>
+            <span>{config.label}</span>
           </span>
         );
       },
@@ -120,67 +201,87 @@ const CustomerSupport = () => {
       key: "createdAt",
       label: "Date",
       sortable: true,
-      render: (value) => new Date(value).toLocaleDateString(),
+      render: formatDate,
     },
   ];
 
-  const actions = (inquiry) => (
-    <div className="flex items-center space-x-2">
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          setSelectedInquiry(inquiry);
-          setShowReplyModal(true);
-        }}
-        className="p-1 rounded hover:bg-gray-100"
-        title="Reply"
-      >
-        <Reply className="h-4 w-4 text-blue-600" />
-      </button>
-      {inquiry.status !== "closed" && (
+  const actions = (inquiry) => {
+    const isClosed = inquiry.status === "closed";
+    const isClosing = closingId === inquiry._id;
+
+    return (
+      <div className="flex items-center space-x-2">
         <button
-          onClick={(e) => {
-            e.stopPropagation();
-            handleClose(inquiry._id);
+          onClick={(event) => {
+            event.stopPropagation();
+            openReplyModal(inquiry);
           }}
-          className="p-1 rounded hover:bg-gray-100"
-          title="Mark as Closed"
+          disabled={isClosed}
+          className="rounded p-1 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
+          title={isClosed ? "Closed inquiries cannot be replied to" : "Reply"}
         >
-          <Check className="h-4 w-4 text-green-600" />
+          <Reply className="h-4 w-4 text-blue-600" />
         </button>
-      )}
-    </div>
-  );
+        {!isClosed && (
+          <button
+            onClick={(event) => {
+              event.stopPropagation();
+              handleClose(inquiry._id);
+            }}
+            disabled={isClosing}
+            className="rounded p-1 hover:bg-gray-100 disabled:cursor-wait disabled:opacity-40"
+            title="Mark as Closed"
+          >
+            <Check className="h-4 w-4 text-green-600" />
+          </button>
+        )}
+      </div>
+    );
+  };
 
   if (loading) return <LoadingSpinner />;
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-3xl font-bold text-gray-900">Customer Support</h1>
         <div className="flex items-center space-x-2">
           <AlertCircle className="h-5 w-5 text-yellow-500" />
           <span className="text-sm text-gray-600">
-            {inquiries.filter((i) => i.status === "open").length} open inquiries
+            {filter === "all"
+              ? `${summaryCounts.open} open inquiries`
+              : `${inquiries.length} ${filter} inquiries shown • ${summaryCounts.open} open overall`}
           </span>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow p-4">
-        <div className="flex items-center space-x-4">
+      {notice && (
+        <div
+          className={`rounded-lg border px-4 py-3 text-sm ${
+            notice.type === "error"
+              ? "border-red-200 bg-red-50 text-red-700"
+              : "border-green-200 bg-green-50 text-green-700"
+          }`}
+        >
+          {notice.message}
+        </div>
+      )}
+
+      <div className="rounded-lg bg-white p-4 shadow">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <span className="text-sm font-medium text-gray-700">Filter:</span>
-          <div className="flex space-x-2">
+          <div className="flex flex-wrap gap-2">
             {["all", "open", "replied", "closed"].map((status) => (
               <button
                 key={status}
                 onClick={() => setFilter(status)}
-                className={`px-3 py-1 text-sm rounded-lg transition-colors ${
+                className={`rounded-lg px-3 py-1 text-sm transition-colors ${
                   filter === status
                     ? "bg-purple-600 text-white"
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
               >
-                {status.charAt(0).toUpperCase() + status.slice(1)}
+                {status === "all" ? "All" : statusConfig[status].label}
               </button>
             ))}
           </div>
@@ -191,41 +292,54 @@ const CustomerSupport = () => {
         columns={columns}
         data={inquiries}
         actions={actions}
-        onRowClick={setSelectedInquiry}
+        onRowClick={(inquiry) => setSelectedInquiry(normalizeInquiry(inquiry))}
         searchPlaceholder="Search inquiries..."
       />
 
       <ModalForm
         isOpen={showReplyModal}
-        onClose={() => {
-          setShowReplyModal(false);
-          setReplyMessage("");
-        }}
+        onClose={closeReplyModal}
         title="Reply to Inquiry"
         onSubmit={handleReply}
       >
         {selectedInquiry && (
           <div className="space-y-4">
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h4 className="font-medium text-gray-900 mb-2">
+            <div className="rounded-lg bg-gray-50 p-4">
+              <h4 className="mb-2 font-medium text-gray-900">
                 {selectedInquiry.subject}
               </h4>
-              <p className="text-sm text-gray-600 mb-2">
+              <p className="mb-2 text-sm text-gray-600">
                 From: {selectedInquiry.name} ({selectedInquiry.email})
               </p>
-              <p className="text-gray-700">{selectedInquiry.message}</p>
+              <p className="whitespace-pre-wrap text-gray-700">
+                {selectedInquiry.message}
+              </p>
             </div>
 
+            {selectedInquiry.replies.length > 0 && (
+              <ReplyHistory replies={selectedInquiry.replies} compact />
+            )}
+
+            {replyError && (
+              <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {replyError}
+              </div>
+            )}
+
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="support-reply"
+                className="mb-1 block text-sm font-medium text-gray-700"
+              >
                 Your Reply
               </label>
               <textarea
+                id="support-reply"
                 required
                 rows={4}
                 value={replyMessage}
-                onChange={(e) => setReplyMessage(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                onChange={(event) => setReplyMessage(event.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-purple-500"
                 placeholder="Type your reply here..."
               />
             </div>
@@ -233,19 +347,17 @@ const CustomerSupport = () => {
             <div className="flex justify-end space-x-3">
               <button
                 type="button"
-                onClick={() => {
-                  setShowReplyModal(false);
-                  setReplyMessage("");
-                }}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                onClick={closeReplyModal}
+                className="rounded-lg bg-gray-100 px-4 py-2 text-gray-700 hover:bg-gray-200"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 text-white bg-purple-600 rounded-lg hover:bg-purple-700"
+                disabled={isReplying}
+                className="rounded-lg bg-purple-600 px-4 py-2 text-white hover:bg-purple-700 disabled:cursor-wait disabled:opacity-70"
               >
-                Send Reply
+                {isReplying ? "Sending..." : "Send Reply"}
               </button>
             </div>
           </div>
@@ -255,6 +367,9 @@ const CustomerSupport = () => {
       {selectedInquiry && !showReplyModal && (
         <InquiryDetailModal
           inquiry={selectedInquiry}
+          onReply={() => openReplyModal(selectedInquiry)}
+          onCloseInquiry={() => handleClose(selectedInquiry._id)}
+          isClosing={closingId === selectedInquiry._id}
           onClose={() => setSelectedInquiry(null)}
         />
       )}
@@ -262,24 +377,64 @@ const CustomerSupport = () => {
   );
 };
 
-// Inquiry Detail Modal
-const InquiryDetailModal = ({ inquiry, onClose }) => {
+const ReplyHistory = ({ replies, compact = false }) => (
+  <div className="space-y-2">
+    <h4 className="text-sm font-medium text-gray-700">Reply History</h4>
+    <div className="space-y-2">
+      {replies.map((reply) => (
+        <div
+          key={reply._id || reply.sentAt}
+          className={`rounded-lg border border-gray-200 bg-white ${
+            compact ? "p-3" : "p-4"
+          }`}
+        >
+          <p className="whitespace-pre-wrap text-sm text-gray-800">
+            {reply.message}
+          </p>
+          <p className="mt-2 text-xs text-gray-500">
+            Sent {formatDate(reply.sentAt)}
+            {reply.admin?.email ? ` by ${reply.admin.email}` : ""}
+          </p>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+const InquiryDetailModal = ({
+  inquiry,
+  onClose,
+  onReply,
+  onCloseInquiry,
+  isClosing,
+}) => {
+  const config = statusConfig[inquiry.status] || statusConfig.open;
+  const isClosed = inquiry.status === "closed";
+
   return (
-    <div className="fixed inset-0 z-50 overflow-auto bg-black bg-opacity-50 flex items-center justify-center">
-      <div className="bg-white rounded-lg max-w-2xl w-full mx-4 shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-auto bg-black bg-opacity-50">
+      <div className="mx-4 w-full max-w-2xl rounded-lg bg-white shadow-xl">
         <div className="p-6">
-          <div className="flex justify-between items-start mb-4">
-            <h2 className="text-xl font-semibold">Inquiry Details</h2>
+          <div className="mb-4 flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-semibold">Inquiry Details</h2>
+              <span
+                className={`mt-2 inline-flex rounded-full px-2 py-1 text-xs font-medium ${config.color}`}
+              >
+                {config.label}
+              </span>
+            </div>
             <button
               onClick={onClose}
-              className="text-gray-500 hover:text-gray-700"
+              className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+              aria-label="Close details"
             >
-              ×
+              <X className="h-5 w-5" />
             </button>
           </div>
 
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+          <div className="max-h-[70vh] space-y-4 overflow-y-auto pr-1">
+            <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="text-sm font-medium text-gray-500">
                   Name
@@ -290,7 +445,7 @@ const InquiryDetailModal = ({ inquiry, onClose }) => {
                 <label className="text-sm font-medium text-gray-500">
                   Email
                 </label>
-                <p className="text-gray-900">{inquiry.email}</p>
+                <p className="break-all text-gray-900">{inquiry.email}</p>
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-500">
@@ -302,9 +457,7 @@ const InquiryDetailModal = ({ inquiry, onClose }) => {
                 <label className="text-sm font-medium text-gray-500">
                   Date
                 </label>
-                <p className="text-gray-900">
-                  {new Date(inquiry.createdAt).toLocaleString()}
-                </p>
+                <p className="text-gray-900">{formatDate(inquiry.createdAt)}</p>
               </div>
             </div>
 
@@ -312,22 +465,46 @@ const InquiryDetailModal = ({ inquiry, onClose }) => {
               <label className="text-sm font-medium text-gray-500">
                 Subject
               </label>
-              <p className="text-gray-900 font-medium">{inquiry.subject}</p>
+              <p className="font-medium text-gray-900">{inquiry.subject}</p>
             </div>
 
             <div>
               <label className="text-sm font-medium text-gray-500">
                 Message
               </label>
-              <p className="text-gray-900 whitespace-pre-wrap">
+              <p className="whitespace-pre-wrap text-gray-900">
                 {inquiry.message}
               </p>
             </div>
 
-            <div className="flex justify-end">
+            {inquiry.replies.length > 0 && (
+              <ReplyHistory replies={inquiry.replies} />
+            )}
+
+            <div className="flex flex-wrap justify-end gap-3 border-t pt-4">
+              {!isClosed && (
+                <>
+                  <button
+                    type="button"
+                    onClick={onReply}
+                    className="rounded-lg bg-purple-600 px-4 py-2 text-white hover:bg-purple-700"
+                  >
+                    Reply
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onCloseInquiry}
+                    disabled={isClosing}
+                    className="rounded-lg bg-green-600 px-4 py-2 text-white hover:bg-green-700 disabled:cursor-wait disabled:opacity-70"
+                  >
+                    {isClosing ? "Closing..." : "Mark Closed"}
+                  </button>
+                </>
+              )}
               <button
+                type="button"
                 onClick={onClose}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                className="rounded-lg bg-gray-100 px-4 py-2 text-gray-700 hover:bg-gray-200"
               >
                 Close
               </button>

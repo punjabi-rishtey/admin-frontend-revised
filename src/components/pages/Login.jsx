@@ -95,6 +95,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Heart, Lock, Mail } from "lucide-react";
+import adminApi from "../../services/api";
 
 const Login = ({ setIsAuthenticated }) => {
   const [credentials, setCredentials] = useState({ email: "", password: "" });
@@ -108,31 +109,13 @@ const Login = ({ setIsAuthenticated }) => {
     setLoading(true);
 
     try {
-      const res = await fetch(
-        "https://backend-nm1z.onrender.com/api/admin/auth/login",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(credentials),
-        }
-      );
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.message || "Login failed");
-      }
-
-      console.log(data.token);
+      const data = await adminApi.login(credentials);
       localStorage.setItem("token", data.token);
-      // optionally store user info: localStorage.setItem("adminUser", JSON.stringify(data.user));
 
       setIsAuthenticated(true);
       navigate("/users");
     } catch (err) {
-      setError(err.message);
+      setError(err.response?.data?.message || err.message || "Login failed");
     } finally {
       setLoading(false);
     }

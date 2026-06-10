@@ -1,5 +1,5 @@
 // components/pages/MembershipPlans.jsx
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Plus, Edit2, Trash2, Award } from "lucide-react";
 import DataTable from "../common/DataTable";
 import ModalForm from "../common/ModalForm";
@@ -13,6 +13,9 @@ const MembershipPlans = () => {
   const [showModal, setShowModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(null);
+  const [notice, setNotice] = useState(null);
+  const [formError, setFormError] = useState("");
+  const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     price: "",
@@ -20,49 +23,109 @@ const MembershipPlans = () => {
     premiumProfilesView: "Unlimited",
   });
 
-  useEffect(() => {
-    fetchPlans();
-  }, []);
-
-  const fetchPlans = async () => {
+  const fetchPlans = useCallback(async () => {
     try {
       const { data } = await adminApi.fetchMembershipPlans();
-      setPlans(data.plans);
+      setPlans(data.plans || []);
     } catch (error) {
       console.error("Error fetching plans:", error);
+      setNotice({
+        type: "error",
+        message: "Could not load membership plans. Please try again.",
+      });
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    fetchPlans();
+  }, [fetchPlans]);
+
+  const validatePlanForm = () => {
+    const name = formData.name.trim();
+    const price = Number(formData.price);
+    const duration = Number(formData.duration);
+
+    if (!name) return "Plan name is required.";
+    if (!Number.isFinite(price) || price < 0) {
+      return "Price must be 0 or more.";
+    }
+    if (!Number.isInteger(duration) || duration <= 0) {
+      return "Duration must be a whole number of months.";
+    }
+    return "";
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const validationError = validatePlanForm();
+    if (validationError) {
+      setFormError(validationError);
+      return;
+    }
+
+    const payload = {
+      name: formData.name.trim(),
+      price: Number(formData.price),
+      duration: Number(formData.duration),
+      premiumProfilesView:
+        String(formData.premiumProfilesView || "").trim() || "Unlimited",
+    };
+
+    setSaving(true);
+    setFormError("");
     try {
       if (selectedPlan) {
-        await adminApi.updateMembershipPlan(selectedPlan._id, formData);
+        await adminApi.updateMembershipPlan(selectedPlan._id, payload);
       } else {
-        await adminApi.createMembershipPlan(formData);
+        await adminApi.createMembershipPlan(payload);
       }
-      fetchPlans();
+      setNotice({
+        type: "success",
+        message: selectedPlan
+          ? "Membership plan updated."
+          : "Membership plan created.",
+      });
+      await fetchPlans();
       handleCloseModal();
     } catch (error) {
       console.error("Error saving plan:", error);
+      setFormError(
+        error.response?.data?.error ||
+          error.response?.data?.message ||
+          "Could not save this membership plan."
+      );
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleDelete = async () => {
     try {
       await adminApi.deleteMembershipPlan(selectedPlan._id);
-      fetchPlans();
+      setNotice({
+        type: "success",
+        message: `${selectedPlan.name} plan deleted.`,
+      });
+      await fetchPlans();
       setShowDeleteDialog(false);
     } catch (error) {
       console.error("Error deleting plan:", error);
+      setNotice({
+        type: "error",
+        message:
+          error.response?.data?.error ||
+          error.response?.data?.message ||
+          "Could not delete this membership plan.",
+      });
     }
   };
 
   const handleCloseModal = () => {
     setShowModal(false);
     setSelectedPlan(null);
+    setFormError("");
     setFormData({
       name: "",
       price: "",
@@ -77,7 +140,7 @@ const MembershipPlans = () => {
       name: plan.name,
       price: plan.price,
       duration: plan.duration,
-      premiumProfilesView: plan.premiumProfilesView,
+      premiumProfilesView: plan.premiumProfilesView || "Unlimited",
     });
     setShowModal(true);
   };
@@ -104,7 +167,7 @@ const MembershipPlans = () => {
       key: "duration",
       label: "Duration",
       sortable: true,
-      render: (value) => `${value} days`,
+      render: (value) => `${value} month${Number(value) === 1 ? "" : "s"}`,
     },
     {
       key: "premiumProfilesView",
@@ -172,7 +235,7 @@ const MembershipPlans = () => {
               ₹{plan.price}
             </div>
             <div className="text-sm text-gray-600 mb-4">
-              {plan.duration} days validity
+              {plan.duration} month{Number(plan.duration) === 1 ? "" : "s"} validity
             </div>
             <div className="text-sm text-gray-600">
               {/* <strong>Profile Views:</strong> {plan.premiumProfilesView} */}
@@ -187,6 +250,18 @@ const MembershipPlans = () => {
         actions={actions}
         searchPlaceholder="Search plans..."
       />
+
+      {notice && (
+        <div
+          className={`rounded-lg border px-4 py-3 text-sm ${
+            notice.type === "success"
+              ? "border-green-200 bg-green-50 text-green-800"
+              : "border-red-200 bg-red-50 text-red-800"
+          }`}
+        >
+          {notice.message}
+        </div>
+      )}
 
       <ModalForm
         isOpen={showModal}
@@ -230,7 +305,7 @@ const MembershipPlans = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Duration (days)
+              Duration (months)
             </label>
             <input
               type="number"
@@ -241,7 +316,8 @@ const MembershipPlans = () => {
                 setFormData({ ...formData, duration: e.target.value })
               }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              placeholder="e.g., 365"
+              step="1"
+              placeholder="e.g., 6"
             />
           </div>
 
@@ -263,6 +339,12 @@ const MembershipPlans = () => {
             />
           </div>
 
+          {formError && (
+            <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {formError}
+            </div>
+          )}
+
           <div className="flex justify-end space-x-3 pt-4">
             <button
               type="button"
@@ -273,9 +355,12 @@ const MembershipPlans = () => {
             </button>
             <button
               type="submit"
-              className="px-4 py-2 text-white bg-purple-600 rounded-lg hover:bg-purple-700"
+              disabled={saving}
+              className="px-4 py-2 text-white bg-purple-600 rounded-lg hover:bg-purple-700 disabled:cursor-not-allowed disabled:bg-gray-300"
             >
-              {selectedPlan ? "Update" : "Add"} Plan
+              {saving
+                ? "Saving..."
+                : `${selectedPlan ? "Update" : "Add"} Plan`}
             </button>
           </div>
         </div>
@@ -286,7 +371,8 @@ const MembershipPlans = () => {
         onClose={() => setShowDeleteDialog(false)}
         onConfirm={handleDelete}
         title="Delete Membership Plan"
-        message={`Are you sure you want to delete the ${selectedPlan?.name} plan? This action cannot be undone.`}
+        message={`Delete the ${selectedPlan?.name} plan? People will no longer be able to select it for new payments. Existing users are not automatically changed.`}
+        confirmText="Delete Plan"
       />
     </div>
   );

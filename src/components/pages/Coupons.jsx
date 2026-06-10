@@ -1,5 +1,5 @@
 // components/pages/Coupons.jsx
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Plus,
   Edit2,
@@ -20,6 +20,10 @@ const Coupons = () => {
   const [showModal, setShowModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedCoupon, setSelectedCoupon] = useState(null);
+  const [statusConfirm, setStatusConfirm] = useState(null);
+  const [notice, setNotice] = useState(null);
+  const [formError, setFormError] = useState("");
+  const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
     code: "",
     discountType: "percentage",
@@ -27,60 +31,150 @@ const Coupons = () => {
     isActive: true,
   });
 
-  useEffect(() => {
-    fetchCoupons();
-  }, []);
-
-  const fetchCoupons = async () => {
+  const fetchCoupons = useCallback(async () => {
     try {
       const {
         data: { coupons },
       } = await adminApi.fetchCoupons();
-      setCoupons(coupons);
+      setCoupons(coupons || []);
     } catch (error) {
       console.error("Error fetching coupons:", error);
+      setNotice({
+        type: "error",
+        message: "Could not load coupons. Please try again.",
+      });
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    fetchCoupons();
+  }, [fetchCoupons]);
+
+  const validateCouponForm = () => {
+    const code = formData.code.trim().toUpperCase();
+    const discountValue = Number(formData.discountValue);
+
+    if (!code) return "Coupon code is required.";
+    if (!/^[A-Z0-9_-]{3,30}$/.test(code)) {
+      return "Coupon code must be 3-30 characters using letters, numbers, hyphen, or underscore.";
+    }
+    if (!Number.isFinite(discountValue) || discountValue <= 0) {
+      return "Discount value must be greater than 0.";
+    }
+    if (formData.discountType === "percentage" && discountValue > 100) {
+      return "Percentage discount cannot be more than 100%.";
+    }
+    return "";
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const validationError = validateCouponForm();
+    if (validationError) {
+      setFormError(validationError);
+      return;
+    }
+
+    const payload = {
+      code: formData.code.trim().toUpperCase(),
+      discountType: formData.discountType,
+      discountValue: Number(formData.discountValue),
+      isActive: Boolean(formData.isActive),
+    };
+
+    setSaving(true);
+    setFormError("");
     try {
       if (selectedCoupon) {
-        await adminApi.updateCoupon(selectedCoupon._id, formData);
+        await adminApi.updateCoupon(selectedCoupon._id, payload);
       } else {
-        await adminApi.createCoupon(formData);
+        await adminApi.createCoupon(payload);
       }
-      fetchCoupons();
+      setNotice({
+        type: "success",
+        message: selectedCoupon ? "Coupon updated." : "Coupon created.",
+      });
+      await fetchCoupons();
       handleCloseModal();
     } catch (error) {
       console.error("Error saving coupon:", error);
+      setFormError(
+        error.response?.data?.message ||
+          error.response?.data?.error ||
+          "Could not save this coupon."
+      );
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleDelete = async () => {
     try {
       await adminApi.deleteCoupon(selectedCoupon._id);
-      fetchCoupons();
+      setNotice({
+        type: "success",
+        message: `${selectedCoupon.code} coupon deleted.`,
+      });
+      await fetchCoupons();
       setShowDeleteDialog(false);
     } catch (error) {
       console.error("Error deleting coupon:", error);
+      setNotice({
+        type: "error",
+        message:
+          error.response?.data?.message ||
+          error.response?.data?.error ||
+          "Could not delete this coupon.",
+      });
     }
   };
 
   const handleToggleActive = async (coupon) => {
+    setStatusConfirm({
+      coupon,
+      nextActive: !coupon.isActive,
+      title: coupon.isActive ? "Deactivate Coupon" : "Activate Coupon",
+      message: coupon.isActive
+        ? `Deactivate ${coupon.code}? Users will no longer be able to apply this coupon.`
+        : `Activate ${coupon.code}? Users will be able to apply this coupon again.`,
+      confirmText: coupon.isActive ? "Deactivate Coupon" : "Activate Coupon",
+      confirmVariant: coupon.isActive ? "danger" : "success",
+    });
+  };
+
+  const handleConfirmToggleActive = async () => {
+    if (!statusConfirm?.coupon) return;
+
     try {
-      await adminApi.updateCoupon(coupon._id, { isActive: !coupon.isActive });
-      fetchCoupons();
+      await adminApi.updateCoupon(statusConfirm.coupon._id, {
+        isActive: statusConfirm.nextActive,
+      });
+      setNotice({
+        type: "success",
+        message: `${statusConfirm.coupon.code} ${
+          statusConfirm.nextActive ? "activated" : "deactivated"
+        }.`,
+      });
+      setStatusConfirm(null);
+      await fetchCoupons();
     } catch (error) {
       console.error("Error toggling coupon:", error);
+      setNotice({
+        type: "error",
+        message:
+          error.response?.data?.message ||
+          error.response?.data?.error ||
+          "Could not update this coupon.",
+      });
     }
   };
 
   const handleCloseModal = () => {
     setShowModal(false);
     setSelectedCoupon(null);
+    setFormError("");
     setFormData({
       code: "",
       discountType: "percentage",
@@ -244,6 +338,18 @@ const Coupons = () => {
         searchPlaceholder="Search coupons..."
       />
 
+      {notice && (
+        <div
+          className={`rounded-lg border px-4 py-3 text-sm ${
+            notice.type === "success"
+              ? "border-green-200 bg-green-50 text-green-800"
+              : "border-red-200 bg-red-50 text-red-800"
+          }`}
+        >
+          {notice.message}
+        </div>
+      )}
+
       <ModalForm
         isOpen={showModal}
         onClose={handleCloseModal}
@@ -292,7 +398,7 @@ const Coupons = () => {
             <input
               type="number"
               required
-              min="0"
+              min="1"
               max={formData.discountType === "percentage" ? "100" : undefined}
               value={formData.discountValue}
               onChange={(e) =>
@@ -325,6 +431,12 @@ const Coupons = () => {
             </label>
           </div>
 
+          {formError && (
+            <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {formError}
+            </div>
+          )}
+
           <div className="flex justify-end space-x-3 pt-4">
             <button
               type="button"
@@ -335,9 +447,12 @@ const Coupons = () => {
             </button>
             <button
               type="submit"
-              className="px-4 py-2 text-white bg-purple-600 rounded-lg hover:bg-purple-700"
+              disabled={saving}
+              className="px-4 py-2 text-white bg-purple-600 rounded-lg hover:bg-purple-700 disabled:cursor-not-allowed disabled:bg-gray-300"
             >
-              {selectedCoupon ? "Update" : "Add"} Coupon
+              {saving
+                ? "Saving..."
+                : `${selectedCoupon ? "Update" : "Add"} Coupon`}
             </button>
           </div>
         </div>
@@ -348,7 +463,17 @@ const Coupons = () => {
         onClose={() => setShowDeleteDialog(false)}
         onConfirm={handleDelete}
         title="Delete Coupon"
-        message={`Are you sure you want to delete the coupon "${selectedCoupon?.code}"? This action cannot be undone.`}
+        message={`Delete coupon "${selectedCoupon?.code}"? Users will no longer be able to apply it. Deactivate instead if you may need it later.`}
+        confirmText="Delete Coupon"
+      />
+      <ConfirmDialog
+        isOpen={Boolean(statusConfirm)}
+        onClose={() => setStatusConfirm(null)}
+        onConfirm={handleConfirmToggleActive}
+        title={statusConfirm?.title}
+        message={statusConfirm?.message}
+        confirmText={statusConfirm?.confirmText}
+        confirmVariant={statusConfirm?.confirmVariant}
       />
     </div>
   );

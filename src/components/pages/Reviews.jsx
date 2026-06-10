@@ -1,39 +1,56 @@
 // components/pages/Reviews.jsx
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Trash2, Star } from "lucide-react";
 import DataTable from "../common/DataTable";
 import ConfirmDialog from "../common/ConfirmDialog";
 import LoadingSpinner from "../common/LoadingSpinner";
 import adminApi from "../../services/api";
 
+const getErrorMessage = (error, fallback) =>
+  error.response?.data?.message || error.response?.data?.error || fallback;
+
 const Reviews = () => {
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedReview, setSelectedReview] = useState(null);
+  const [notice, setNotice] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  useEffect(() => {
-    fetchReviews();
-  }, []);
-
-  const fetchReviews = async () => {
+  const fetchReviews = useCallback(async () => {
     try {
+      setLoading(true);
       const { reviews } = await adminApi.fetchReviews();
       setReviews(reviews);
     } catch (error) {
-      console.error("Error fetching reviews:", error);
+      setNotice({
+        type: "error",
+        message: getErrorMessage(error, "Unable to load reviews."),
+      });
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchReviews();
+  }, [fetchReviews]);
 
   const handleDelete = async () => {
     try {
+      setIsDeleting(true);
       await adminApi.deleteReview(selectedReview._id);
-      fetchReviews();
+      setNotice({ type: "success", message: "Review deleted." });
       setShowDeleteDialog(false);
+      setSelectedReview(null);
+      await fetchReviews();
     } catch (error) {
-      console.error("Error deleting review:", error);
+      setNotice({
+        type: "error",
+        message: getErrorMessage(error, "Unable to delete this review."),
+      });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -109,6 +126,18 @@ const Reviews = () => {
     <div className="space-y-6">
       <h1 className="text-3xl font-bold text-gray-900">Reviews</h1>
 
+      {notice && (
+        <div
+          className={`rounded-lg border px-4 py-3 text-sm ${
+            notice.type === "error"
+              ? "border-red-200 bg-red-50 text-red-700"
+              : "border-green-200 bg-green-50 text-green-700"
+          }`}
+        >
+          {notice.message}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
@@ -176,6 +205,7 @@ const Reviews = () => {
         onConfirm={handleDelete}
         title="Delete Review"
         message="Are you sure you want to delete this review? This action cannot be undone."
+        confirmText={isDeleting ? "Deleting..." : "Delete Review"}
       />
 
       {selectedReview && !showDeleteDialog && (
