@@ -1,39 +1,48 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   Users,
-  DollarSign,
-  TrendingUp,
   Award,
-  Calendar,
+  AlertCircle,
+  Clock,
   PieChart,
-  Heart,
   Ticket,
+  MessageSquare,
+  Mail,
+  Heart,
+  Star,
 } from "lucide-react";
 import Chart from "../common/Chart";
 import StatCard from "../common/StatCard";
 import LoadingSpinner from "../common/LoadingSpinner";
 import adminApi from "../../services/api";
 
+const getErrorMessage = (error, fallback) =>
+  error.response?.data?.message || error.response?.data?.error || fallback;
+
 const Analytics = () => {
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState("30");
+  const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
+    const fetchAnalytics = async () => {
+      try {
+        setLoading(true);
+        const { data } = await adminApi.fetchAnalytics({ days: dateRange });
+        setAnalytics(data);
+        setErrorMessage("");
+      } catch (error) {
+        setErrorMessage(
+          getErrorMessage(error, "Unable to load analytics right now.")
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchAnalytics();
   }, [dateRange]);
-
-  const fetchAnalytics = async () => {
-    try {
-      const { data } = await adminApi.fetchAnalytics({ days: dateRange });
-      console.log(data);
-      setAnalytics(data);
-    } catch (error) {
-      console.error("Error fetching analytics:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (loading) return <LoadingSpinner />;
 
@@ -43,7 +52,7 @@ const Analytics = () => {
         <h1 className="text-3xl font-bold text-gray-900">Analytics</h1>
         <select
           value={dateRange}
-          onChange={(e) => setDateRange(e.target.value)}
+          onChange={(event) => setDateRange(event.target.value)}
           className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
         >
           <option value="7">Last 7 days</option>
@@ -53,61 +62,63 @@ const Analytics = () => {
         </select>
       </div>
 
+      {errorMessage && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {errorMessage}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
           title="Total Users"
-          value={analytics.totalUsers}
+          value={analytics?.totalUsers || 0}
           icon={Users}
-          trend={analytics.userGrowth}
           color="purple"
         />
         <StatCard
-          title="Active Subscriptions"
-          value={analytics.activeSubscriptions}
+          title="Approved Profiles"
+          value={analytics?.approvedUsers || 0}
           icon={Award}
-          trend={analytics.subscriptionGrowth}
           color="green"
         />
         <StatCard
-          title="Monthly Revenue"
-          value={`₹${analytics.monthlyRevenue}`}
-          icon={DollarSign}
-          trend={analytics.revenueGrowth}
-          color="blue"
+          title="Needs Review"
+          value={analytics?.needsReviewUsers || 0}
+          icon={AlertCircle}
+          color="yellow"
         />
         <StatCard
-          title="Success Stories"
-          value={analytics.successStories}
-          icon={Heart}
-          trend={analytics.storiesGrowth}
+          title="Expiring Soon"
+          value={analytics?.expiringSubscriptions || 0}
+          icon={Clock}
           color="red"
         />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
-          title="Avg Profile Completion"
-          value={`${analytics.avgProfileCompletion}%`}
+          title="Avg Completion"
+          value={`${analytics?.avgProfileCompletion || 0}%`}
           icon={PieChart}
-          color="yellow"
+          color="blue"
         />
         <StatCard
-          title="Recent Approvals"
-          value={analytics.recentApprovals}
-          icon={Users}
+          title="Active Coupons"
+          value={analytics?.activeCoupons || 0}
+          icon={Ticket}
           color="green"
         />
         <StatCard
-          title="Pending Profiles"
-          value={analytics.pendingProfiles}
-          icon={Calendar}
-          color="orange"
+          title="Open Inquiries"
+          value={analytics?.openInquiries || 0}
+          icon={Mail}
+          color="yellow"
         />
         <StatCard
-          title="Expiring Subscriptions"
-          value={analytics.expiringSubscriptions}
-          icon={TrendingUp}
-          color="red"
+          title="Active Messages"
+          value={analytics?.activeMessages || 0}
+          icon={MessageSquare}
+          color="purple"
         />
       </div>
 
@@ -115,96 +126,70 @@ const Analytics = () => {
         <Chart
           type="pie"
           title="User Status Distribution"
-          data={analytics.userStatusData}
+          data={analytics?.userStatusData || []}
         />
         <Chart
-          type="bar"
-          title="Revenue by Plan"
-          data={analytics.revenueByPlan}
-          dataKey="revenue"
+          type="line"
+          title={`New Profiles (Last ${analytics?.days || dateRange} Days)`}
+          data={analytics?.signupData || []}
+          dataKey="signups"
+          xKey="label"
         />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Chart
-          type="line"
-          title="Daily Signups"
-          data={analytics.signupData}
-          dataKey="signups"
-          xKey="date"
-        />
-        <Chart
-          type="line"
-          title="Monthly Revenue Trend"
-          data={analytics.monthlyRevenueData}
-          dataKey="revenue"
-          xKey="month"
-        />
-      </div>
-
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          Key Metrics
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div>
-            <h4 className="text-sm font-medium text-gray-600 mb-2">
-              User Engagement
-            </h4>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-sm">Daily Active Users</span>
-                <span className="text-sm font-medium">
-                  {analytics.dailyActiveUsers}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm">Avg Session Duration</span>
-                <span className="text-sm font-medium">
-                  {analytics.avgSessionDuration}
-                </span>
-              </div>
-            </div>
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            Support Overview
+          </h3>
+          <div className="space-y-3">
+            <MetricRow label="Open Inquiries" value={analytics?.openInquiries || 0} />
+            <MetricRow
+              label="Replied Inquiries"
+              value={analytics?.repliedInquiries || 0}
+            />
+            <MetricRow
+              label="Closed Inquiries"
+              value={analytics?.closedInquiries || 0}
+            />
+            <MetricRow
+              label="Broadcast Messages"
+              value={analytics?.totalMessages || 0}
+            />
+            <MetricRow
+              label="Recent Approvals"
+              value={analytics?.recentApprovals || 0}
+            />
           </div>
+        </div>
 
-          <div>
-            <h4 className="text-sm font-medium text-gray-600 mb-2">
-              Conversion Metrics
-            </h4>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-sm">Free to Paid</span>
-                <span className="text-sm font-medium">
-                  {analytics.conversionRate}%
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm">Avg Time to Convert</span>
-                <span className="text-sm font-medium">
-                  {analytics.avgTimeToConvert} days
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <h4 className="text-sm font-medium text-gray-600 mb-2">
-              Coupon Analytics
-            </h4>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-sm">Coupons Used</span>
-                <span className="text-sm font-medium">
-                  {analytics.couponsUsed}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm">Total Discount Given</span>
-                <span className="text-sm font-medium">
-                  ₹{analytics.totalDiscountGiven}
-                </span>
-              </div>
-            </div>
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            Offers & Content
+          </h3>
+          <div className="space-y-4">
+            <SummaryBadge
+              icon={Heart}
+              label="Testimonials"
+              value={analytics?.successStories || 0}
+            />
+            <SummaryBadge
+              icon={Star}
+              label="Reviews"
+              value={analytics?.reviewCount || 0}
+            />
+            <SummaryBadge
+              icon={Ticket}
+              label="Coupon Uses"
+              value={analytics?.couponUsageCount || 0}
+            />
+            <SummaryBadge
+              icon={Ticket}
+              label="Total Discount Given"
+              value={`₹${(analytics?.totalDiscountAmount || 0).toLocaleString(
+                "en-IN"
+              )}`}
+            />
           </div>
         </div>
       </div>
@@ -212,163 +197,27 @@ const Analytics = () => {
   );
 };
 
+const MetricRow = ({ label, value }) => (
+  <div className="flex items-center justify-between rounded-lg bg-gray-50 px-4 py-3">
+    <span className="text-sm text-gray-700">{label}</span>
+    <span className="text-sm font-semibold text-gray-900">{value}</span>
+  </div>
+);
+
+const SummaryBadge = ({ icon, label, value }) => {
+  const Icon = icon;
+
+  return (
+    <div className="flex items-center justify-between rounded-lg border border-gray-200 px-4 py-3">
+      <div className="flex items-center gap-3">
+        <div className="rounded-lg bg-purple-50 p-2 text-purple-600">
+          <Icon className="h-4 w-4" />
+        </div>
+        <span className="text-sm text-gray-700">{label}</span>
+      </div>
+      <span className="text-sm font-semibold text-gray-900">{value}</span>
+    </div>
+  );
+};
+
 export default Analytics;
-
-// // components/pages/Analytics.jsx
-// import { useState, useEffect } from 'react';
-// import { Users, DollarSign, TrendingUp, Award, Calendar, PieChart } from 'lucide-react';
-// import Chart from '../common/Chart';
-// import StatCard from '../common/StatCard';
-// import LoadingSpinner from '../common/LoadingSpinner';
-// import adminApi from '../../services/adminApi';
-
-// const Analytics = () => {
-//   const [analytics, setAnalytics] = useState(null);
-//   const [loading, setLoading] = useState(true);
-//   const [dateRange, setDateRange] = useState('30');
-
-//   useEffect(() => {
-//     fetchAnalytics();
-//   }, [dateRange]);
-
-//   const fetchAnalytics = async () => {
-//     try {
-//       const { data } = await adminApi.fetchAnalytics({ days: dateRange });
-//       setAnalytics(data);
-//     } catch (error) {
-//       console.error('Error fetching analytics:', error);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   if (loading) return <LoadingSpinner />;
-
-//   return (
-//     <div className="space-y-6">
-//       <div className="flex justify-between items-center">
-//         <h1 className="text-3xl font-bold text-gray-900">Analytics</h1>
-//         <select
-//           value={dateRange}
-//           onChange={(e) => setDateRange(e.target.value)}
-//           className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-//         >
-//           <option value="7">Last 7 days</option>
-//           <option value="30">Last 30 days</option>
-//           <option value="90">Last 90 days</option>
-//           <option value="365">Last year</option>
-//         </select>
-//       </div>
-
-//       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-//         <StatCard
-//           title="Total Users"
-//           value={analytics?.totalUsers || 0}
-//           icon={Users}
-//           trend={analytics?.userGrowth}
-//           color="purple"
-//         />
-//         <StatCard
-//           title="Active Subscriptions"
-//           value={analytics?.activeSubscriptions || 0}
-//           icon={Award}
-//           trend={analytics?.subscriptionGrowth}
-//           color="green"
-//         />
-//         <StatCard
-//           title="Total Revenue"
-//           value={`₹${analytics?.totalRevenue || 0}`}
-//           icon={DollarSign}
-//           trend={analytics?.revenueGrowth}
-//           color="blue"
-//         />
-//         <StatCard
-//           title="Avg Profile Completion"
-//           value={`${analytics?.avgProfileCompletion || 0}%`}
-//           icon={PieChart}
-//           color="yellow"
-//         />
-//       </div>
-
-//       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-//         <Chart
-//           type="pie"
-//           title="User Status Distribution"
-//           data={analytics?.userStatusData || []}
-//         />
-//         <Chart
-//           type="bar"
-//           title="Subscription Revenue by Plan"
-//           data={analytics?.revenueByPlan || []}
-//           dataKey="revenue"
-//         />
-//       </div>
-
-//       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-//         <Chart
-//           type="line"
-//           title="Daily Signups"
-//           data={analytics?.signupData || []}
-//           dataKey="signups"
-//           xKey="date"
-//         />
-//         <Chart
-//           type="line"
-//           title="Monthly Revenue Trend"
-//           data={analytics?.monthlyRevenueData || []}
-//           dataKey="revenue"
-//           xKey="month"
-//         />
-//       </div>
-
-//       <div className="bg-white rounded-lg shadow p-6">
-//         <h3 className="text-lg font-semibold text-gray-900 mb-4">Key Metrics</h3>
-//         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-//           <div>
-//             <h4 className="text-sm font-medium text-gray-600 mb-2">User Engagement</h4>
-//             <div className="space-y-2">
-//               <div className="flex justify-between">
-//                 <span className="text-sm">Daily Active Users</span>
-//                 <span className="text-sm font-medium">{analytics?.dailyActiveUsers || 0}</span>
-//               </div>
-//               <div className="flex justify-between">
-//                 <span className="text-sm">Avg Session Duration</span>
-//                 <span className="text-sm font-medium">{analytics?.avgSessionDuration || '0m'}</span>
-//               </div>
-//             </div>
-//           </div>
-
-//           <div>
-//             <h4 className="text-sm font-medium text-gray-600 mb-2">Conversion Metrics</h4>
-//             <div className="space-y-2">
-//               <div className="flex justify-between">
-//                 <span className="text-sm">Free to Paid</span>
-//                 <span className="text-sm font-medium">{analytics?.conversionRate || 0}%</span>
-//               </div>
-//               <div className="flex justify-between">
-//                 <span className="text-sm">Avg Time to Convert</span>
-//                 <span className="text-sm font-medium">{analytics?.avgTimeToConvert || '0'} days</span>
-//               </div>
-//             </div>
-//           </div>
-
-//           <div>
-//             <h4 className="text-sm font-medium text-gray-600 mb-2">Coupon Analytics</h4>
-//             <div className="space-y-2">
-//               <div className="flex justify-between">
-//                 <span className="text-sm">Coupons Used</span>
-//                 <span className="text-sm font-medium">{analytics?.couponsUsed || 0}</span>
-//               </div>
-//               <div className="flex justify-between">
-//                 <span className="text-sm">Total Discount Given</span>
-//                 <span className="text-sm font-medium">₹{analytics?.totalDiscountGiven || 0}</span>
-//               </div>
-//             </div>
-//           </div>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default Analytics;

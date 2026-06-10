@@ -23,6 +23,7 @@ import adminApi from "../../services/api";
 import SectionCard from "../common/SectionCard";
 import InputField from "../common/InputField";
 import ProfilePhotosSection from "../common/ProfilePhotosSection";
+import ConfirmDialog from "../common/ConfirmDialog";
 import normalizeUserData from "../../utils/normalizeUserData";
 import selectOptions from "../../utils/selectOptions";
 
@@ -57,6 +58,7 @@ const EditUserPage = () => {
   const [previewUrl, setPreviewUrl] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(null);
+  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
 
   const fetchUserDetails = useCallback(async () => {
     try {
@@ -129,13 +131,19 @@ const EditUserPage = () => {
     setError("");
     setSuccess("");
     try {
-      const imageUrl = await adminApi.uploadProfilePicture(id, selectedFile);
+      const result = await adminApi.uploadProfilePicture(id, selectedFile);
+      const nextPictures = result.profile_pictures || [];
       setFormData((prev) => ({
         ...prev,
         user: {
           ...prev.user,
-          profile_pictures: [...prev.user.profile_pictures, imageUrl],
+          profile_pictures: nextPictures,
         },
+      }));
+      setUser((prev) => ({
+        ...prev,
+        profile_pictures: nextPictures,
+        profile_picture: result.profile_picture,
       }));
       setSuccess("Profile picture uploaded successfully!");
       setSelectedFile(null);
@@ -153,19 +161,17 @@ const EditUserPage = () => {
     setError("");
     setSuccess("");
     try {
-      const updatedPictures = formData.user.profile_pictures.filter(
-        (_, i) => i !== index
-      );
-      await adminApi.updateUserDetails(
-        id,
-        {
-          profile_pictures: updatedPictures,
-        },
-        "user"
-      );
+      const imagePath = formData.user.profile_pictures[index];
+      const result = await adminApi.deleteProfilePicture(id, imagePath);
+      const updatedPictures = result.profile_pictures || [];
       setFormData((prev) => ({
         ...prev,
         user: { ...prev.user, profile_pictures: updatedPictures },
+      }));
+      setUser((prev) => ({
+        ...prev,
+        profile_pictures: updatedPictures,
+        profile_picture: result.profile_picture,
       }));
       setSuccess("Profile picture deleted successfully!");
       setSelectedPhotoIndex(null);
@@ -196,6 +202,11 @@ const EditUserPage = () => {
     try {
       let dataToSend = formData[section];
       if (section === "user") {
+        const submitterText = e.currentTarget?.textContent || "";
+        const safeUserData = { ...dataToSend };
+        delete safeUserData.profile_pictures;
+        delete safeUserData.profile_picture;
+        delete safeUserData.profile_picture_assets;
         const mapTri = (val) =>
           val === ""
             ? null
@@ -204,17 +215,42 @@ const EditUserPage = () => {
             : val === "false"
             ? false
             : null;
-        dataToSend = {
-          ...dataToSend,
-          hobbies: formData.user.hobbies
-            .split(",")
-            .map((h) => h.trim())
-            .filter((h) => h),
-          lifestyle: {
-            ...formData.user.lifestyle,
-            abroad_ready: mapTri(formData.user.lifestyle.abroad_ready),
-          },
-        };
+        if (submitterText.includes("Birth")) {
+          dataToSend = { birth_details: safeUserData.birth_details };
+        } else if (submitterText.includes("Physical")) {
+          dataToSend = {
+            physical_attributes: safeUserData.physical_attributes,
+          };
+        } else if (submitterText.includes("Lifestyle")) {
+          dataToSend = {
+            lifestyle: {
+              ...safeUserData.lifestyle,
+              abroad_ready: mapTri(safeUserData.lifestyle.abroad_ready),
+            },
+          };
+        } else if (submitterText.includes("Location")) {
+          dataToSend = { location: safeUserData.location };
+        } else {
+          dataToSend = {
+            name: safeUserData.name,
+            email: safeUserData.email?.trim().toLowerCase(),
+            mobile: safeUserData.mobile?.trim(),
+            gender: safeUserData.gender,
+            dob: safeUserData.dob,
+            religion: safeUserData.religion,
+            caste: safeUserData.caste,
+            height: safeUserData.height,
+            language: safeUserData.language,
+            marital_status: safeUserData.marital_status,
+            mangalik: safeUserData.mangalik,
+            hobbies: String(formData.user.hobbies || "")
+              .split(",")
+              .map((h) => h.trim())
+              .filter((h) => h),
+            about_myself: safeUserData.about_myself,
+            looking_for: safeUserData.looking_for,
+          };
+        }
       }
       await adminApi.updateUserDetails(id, dataToSend, section);
       setSuccess(
@@ -223,7 +259,11 @@ const EditUserPage = () => {
         } updated successfully!`
       );
     } catch (error) {
-      setError(`Failed to update ${section} details`);
+      setError(
+        error.message ||
+          error.response?.data?.message ||
+          `Failed to update ${section} details`
+      );
       console.error(`Error updating ${section}:`, error);
     } finally {
       setLoading(false);
@@ -236,13 +276,14 @@ const EditUserPage = () => {
       setError("Please enter a new password.");
       return;
     }
-    const confirm = window.confirm(
-      `Are you sure you want to change the password for ${formData.user.name} to ${passwordData.newPassword}?`
-    );
-    if (!confirm) {
-      setPasswordData({ newPassword: "" });
+    if (passwordData.newPassword.trim().length < 6) {
+      setError("New password must be at least 6 characters long.");
       return;
     }
+    setShowPasswordConfirm(true);
+  };
+
+  const confirmPasswordChange = async () => {
     setLoading(true);
     setError("");
     setSuccess("");
@@ -250,8 +291,13 @@ const EditUserPage = () => {
       await adminApi.changeUserPassword(id, passwordData.newPassword);
       setSuccess("Password changed successfully!");
       setPasswordData({ newPassword: "" });
+      setShowPasswordConfirm(false);
     } catch (error) {
-      setError("Failed to change password");
+      setError(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to change password"
+      );
       console.error("Error changing password:", error);
     } finally {
       setLoading(false);
@@ -1037,6 +1083,16 @@ const EditUserPage = () => {
             </div>
           </form>
         </SectionCard>
+
+        <ConfirmDialog
+          isOpen={showPasswordConfirm}
+          onClose={() => setShowPasswordConfirm(false)}
+          onConfirm={confirmPasswordChange}
+          title="Change Password"
+          message={`Change the password for ${formData.user.name}? The new password you entered will be applied immediately.`}
+          confirmText="Change Password"
+          confirmVariant="primary"
+        />
       </div>
     </div>
   );

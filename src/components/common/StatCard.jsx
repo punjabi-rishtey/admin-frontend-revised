@@ -1,5 +1,6 @@
 // components/common/StatCard.jsx
-const StatCard = ({ title, value, icon: Icon, trend, color = "purple" }) => {
+const StatCard = ({ title, value, icon, trend, color = "purple" }) => {
+  const Icon = icon;
   const colorClasses = {
     purple: "bg-purple-100 text-purple-600",
     green: "bg-green-100 text-green-600",

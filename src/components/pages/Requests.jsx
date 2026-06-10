@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   User,
@@ -7,42 +7,60 @@ import {
 } from "lucide-react";
 import DataTable from "../common/DataTable";
 import LoadingSpinner from "../common/LoadingSpinner";
-import ApproveModal from "../common/ApproveModal";
 import adminApi from "../../services/api";
 
 const Requests = () => {
   const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [approvingId, setApprovingId] = useState(null);
+  const [notice, setNotice] = useState(null);
 
-  useEffect(() => {
-    fetchPendingUsers();
-  }, []);
-
-  const fetchPendingUsers = async () => {
+  const fetchPendingUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const { users } = await adminApi.fetchUsers({ status: "all" });
+      const { users } = await adminApi.fetchUsers({ status: "Unapproved" });
       const usersWithFlatDate = users.map((u) => ({
         ...u,
         register_date: u?.metadata?.register_date || null,
       }));
-      const unapprovedUsers = usersWithFlatDate.filter(user => user.status === "Unapproved");
+      const unapprovedUsers = usersWithFlatDate.filter((user) => !user.is_deleted);
       setUsers(unapprovedUsers);
     } catch (error) {
       console.error("Error fetching unapproved users:", error);
+      setNotice({
+        type: "error",
+        message: "Could not load registration requests. Please try again.",
+      });
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchPendingUsers();
+  }, [fetchPendingUsers]);
 
   const handleApprove = async (user) => {
+    setApprovingId(user._id);
+    setNotice(null);
     try {
       await adminApi.updateUserToPending(user._id);
-      fetchPendingUsers(); // Refresh the list
+      setNotice({
+        type: "success",
+        message: `${user.name || "User"} moved to Pending review.`,
+      });
+      await fetchPendingUsers();
     } catch (error) {
       console.error("Error updating user status:", error);
-      alert("Failed to approve user");
+      setNotice({
+        type: "error",
+        message:
+          error.response?.data?.message ||
+          "Could not move this user to Pending. Please try again.",
+      });
+    } finally {
+      setApprovingId(null);
     }
   };
 
@@ -96,15 +114,17 @@ const Requests = () => {
   const actions = (user) => (
     <div className="flex items-center space-x-2">
       <button
+        type="button"
+        disabled={approvingId === user._id}
         onClick={(e) => {
           e.stopPropagation();
           handleApprove(user);
         }}
-        className="flex items-center space-x-1 px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700"
-        title="Approve User"
+        className="flex items-center space-x-1 px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+        title="Move user to Pending review"
       >
         <Check className="h-4 w-4" />
-        <span>Approve</span>
+        <span>{approvingId === user._id ? "Moving..." : "Move to Pending"}</span>
       </button>
     </div>
   );
@@ -118,7 +138,9 @@ const Requests = () => {
           <Clock className="h-8 w-8 text-yellow-600" />
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Requests</h1>
-            <p className="text-gray-600">Users awaiting approval</p>
+            <p className="text-gray-600">
+              New registrations waiting for review
+            </p>
           </div>
         </div>
         <div className="flex items-center space-x-2 px-4 py-2 bg-red-100 text-red-800 rounded-lg">
@@ -127,6 +149,18 @@ const Requests = () => {
         </div>
       </div>
 
+      {notice && (
+        <div
+          className={`rounded-lg border px-4 py-3 text-sm ${
+            notice.type === "success"
+              ? "border-green-200 bg-green-50 text-green-800"
+              : "border-red-200 bg-red-50 text-red-800"
+          }`}
+        >
+          {notice.message}
+        </div>
+      )}
+
       {users.length === 0 ? (
         <div className="bg-white rounded-lg shadow p-12 text-center">
           <Clock className="h-16 w-16 text-gray-300 mx-auto mb-4" />
@@ -134,7 +168,7 @@ const Requests = () => {
             No unapproved users
           </h3>
           <p className="text-gray-500">
-            All users have been approved or processed.
+            All new registrations have been moved forward or processed.
           </p>
         </div>
       ) : (

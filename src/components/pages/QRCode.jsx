@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { UploadCloud, QrCode } from "lucide-react";
-
-const API_URL = "https://backend-nm1z.onrender.com/api/admin/auth/qr";
+import adminApi from "../../services/api";
 
 const QRCode = () => {
   const [qr, setQr] = useState(null);
@@ -9,15 +8,29 @@ const QRCode = () => {
   const [image, setImage] = useState(null);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
+  const [isFetching, setIsFetching] = useState(true);
+  const [fileInputKey, setFileInputKey] = useState(0);
 
   const fetchQR = async () => {
     try {
-      const res = await fetch(API_URL);
-      if (!res.ok) throw new Error("No QR code found");
-      const data = await res.json();
+      setIsFetching(true);
+      setErrorMsg("");
+      const data = await adminApi.fetchQR();
       setQr(data);
     } catch (err) {
-      console.warn("No existing QR:", err.message);
+      if (err.response?.status === 404) {
+        setQr(null);
+        return;
+      }
+
+      setErrorMsg(
+        err.response?.data?.error ||
+          err.response?.data?.message ||
+          "Unable to load the current QR code."
+      );
+    } finally {
+      setIsFetching(false);
     }
   };
 
@@ -27,36 +40,65 @@ const QRCode = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!name || !image) {
+    const trimmedName = name.trim();
+
+    if (!trimmedName || !image) {
       setErrorMsg("Both UPI ID and QR image are required.");
       return;
     }
 
-    const formData = new FormData();
-    formData.append("name", name);
-    formData.append("image", image);
+    if (trimmedName.length > 100) {
+      setErrorMsg("UPI ID must be 100 characters or less.");
+      return;
+    }
 
     try {
       setLoading(true);
       setErrorMsg("");
+      setSuccessMsg("");
 
-      const res = await fetch(`${API_URL}/upload`, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!res.ok) throw new Error("Upload failed");
-
-      const data = await res.json();
+      const data = await adminApi.uploadQR({ name: trimmedName, image });
       setQr(data);
       setName("");
       setImage(null);
+      setFileInputKey((current) => current + 1);
+      setSuccessMsg("QR code updated successfully.");
     } catch (err) {
-      setErrorMsg("Upload failed. Please try again.");
-      console.error(err);
+      setErrorMsg(
+        err.response?.data?.error ||
+          err.response?.data?.message ||
+          "Upload failed. Please try again."
+      );
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleImageChange = (e) => {
+    const nextFile = e.target.files?.[0] || null;
+    setSuccessMsg("");
+
+    if (!nextFile) {
+      setImage(null);
+      return;
+    }
+
+    if (!nextFile.type.startsWith("image/")) {
+      setImage(null);
+      setErrorMsg("Please choose a valid image file.");
+      setFileInputKey((current) => current + 1);
+      return;
+    }
+
+    if (nextFile.size > 5 * 1024 * 1024) {
+      setImage(null);
+      setErrorMsg("QR image must be 5MB or smaller.");
+      setFileInputKey((current) => current + 1);
+      return;
+    }
+
+    setErrorMsg("");
+    setImage(nextFile);
   };
 
   return (
@@ -79,6 +121,18 @@ const QRCode = () => {
             alt="QR Code"
             className="w-48 h-48 mx-auto rounded-lg border border-gray-300 dark:border-gray-700 object-contain"
           />
+        </div>
+      )}
+
+      {!isFetching && !qr && !errorMsg && (
+        <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4 text-center text-sm text-gray-600">
+          No QR code is configured yet.
+        </div>
+      )}
+
+      {successMsg && (
+        <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+          {successMsg}
         </div>
       )}
 
@@ -109,16 +163,24 @@ const QRCode = () => {
             QR Image
           </label>
           <input
+            key={fileInputKey}
             id="image"
             type="file"
             accept="image/*"
-            onChange={(e) => setImage(e.target.files[0])}
+            onChange={handleImageChange}
             className="w-full text-sm text-gray-500 file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100 dark:file:bg-gray-700 dark:file:text-purple-300"
             required
           />
+          <p className="mt-1 text-xs text-gray-500">
+            Use a JPG, PNG, or WebP image up to 5MB.
+          </p>
         </div>
 
-        {errorMsg && <p className="text-red-500 text-sm">{errorMsg}</p>}
+        {errorMsg && (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {errorMsg}
+          </div>
+        )}
 
         <button
           type="submit"

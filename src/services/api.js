@@ -1,6 +1,11 @@
 import axios from "axios";
 
-const BASE_URL = "https://backend-nm1z.onrender.com/api";
+const DEFAULT_BASE_URL = import.meta.env.DEV
+  ? "http://127.0.0.1:8080/api"
+  : "https://backend-nm1z.onrender.com/api";
+
+const BASE_URL =
+  (import.meta.env.VITE_API_BASE_URL || DEFAULT_BASE_URL).replace(/\/+$/, "");
 const API_BASE_URL = `${BASE_URL}/admin/auth`;
 const TESTIMONIALS_BASE = `${BASE_URL}/testimonials`;
 const COUPONS_BASE = `${BASE_URL}/coupons`;
@@ -12,7 +17,50 @@ const getAuthHeader = () => {
   return { Authorization: `Bearer ${token}` };
 };
 
+const derivePaymentDurationMonths = (payment) => {
+  const storedDuration = Number(payment?.membershipDurationMonths);
+
+  if (Number.isInteger(storedDuration) && storedDuration > 0) {
+    return storedDuration;
+  }
+
+  const start = new Date(payment?.createdAt);
+  const end = new Date(payment?.expiresAt);
+
+  if (
+    Number.isNaN(start.getTime()) ||
+    Number.isNaN(end.getTime()) ||
+    end <= start
+  ) {
+    return null;
+  }
+
+  let months =
+    (end.getFullYear() - start.getFullYear()) * 12 +
+    (end.getMonth() - start.getMonth());
+
+  if (months < 1) {
+    return 1;
+  }
+
+  const adjustedEnd = new Date(start);
+  adjustedEnd.setMonth(adjustedEnd.getMonth() + months);
+
+  if (adjustedEnd < end) {
+    months += 1;
+  }
+
+  return months;
+};
+
 const adminApi = {
+  login: async (credentials) => {
+    const res = await axios.post(`${API_BASE_URL}/login`, credentials, {
+      headers: { "Content-Type": "application/json" },
+    });
+    return res.data;
+  },
+
   // USERS
   fetchUsers: async (filters) => {
     const status = filters.status === "all" ? "Total" : filters.status;
@@ -65,27 +113,31 @@ const adminApi = {
   uploadProfilePicture: async (userId, file) => {
     try {
       const formData = new FormData();
-      formData.append("file", file);
-      formData.append("upload_preset", "unsigned");
-      formData.append("folder", "profile_test5");
-      const cloudinaryResponse = await axios.post(
-        "https://api.cloudinary.com/v1_1/dkbzoosmm/image/upload",
-        formData
-      );
-      const imageUrl = cloudinaryResponse.data.secure_url;
-      const response = await axios.put(
-        `${API_BASE_URL}/users/edit/${userId}`,
-        { profile_pictures: [imageUrl] },
+      formData.append("profile_pictures", file);
+      const response = await axios.post(
+        `${API_BASE_URL}/users/${userId}/profile-pictures`,
+        formData,
         {
-          headers: { ...getAuthHeader(), "Content-Type": "application/json" },
+          headers: getAuthHeader(),
         }
       );
-      return imageUrl;
+      return response.data;
     } catch (error) {
       throw new Error(
         error.response?.data?.message || "Failed to upload profile picture"
       );
     }
+  },
+
+  deleteProfilePicture: async (userId, imagePath) => {
+    const response = await axios.delete(
+      `${API_BASE_URL}/users/${userId}/profile-pictures`,
+      {
+        headers: { ...getAuthHeader(), "Content-Type": "application/json" },
+        data: { imagePath },
+      }
+    );
+    return response.data;
   },
 
   changeUserPassword: async (userId, newPassword) => {
@@ -106,7 +158,12 @@ const adminApi = {
   },
 
   restoreUser: async (id) => {
-    console.warn("Restore API not implemented.");
+    const res = await axios.put(
+      `${API_BASE_URL}/restoreuser/${id}`,
+      {},
+      { headers: getAuthHeader() }
+    );
+    return res.data;
   },
 
   updateUserStatus: async (id, status) => {
@@ -143,8 +200,8 @@ const adminApi = {
 
   updateUserToPending: async (userId) => {
     return await axios.put(
-      `${BASE_URL}/users/${userId}`,
-      { status: "Pending" },
+      `${API_BASE_URL}/users/${userId}/pending`,
+      {},
       {
         headers: { ...getAuthHeader(), "Content-Type": "application/json" },
       }
@@ -207,9 +264,15 @@ const adminApi = {
   },
 
   // INQUIRIES
-  fetchInquiries: async () => {
+  fetchInquiries: async (filters = {}) => {
+    const params =
+      filters.status && filters.status !== "all"
+        ? { status: filters.status }
+        : {};
+
     const res = await axios.get(`${API_BASE_URL}/inquiries/all`, {
       headers: getAuthHeader(),
+      params,
     });
     return { inquiries: res.data };
   },
@@ -229,19 +292,31 @@ const adminApi = {
   },
 
   // PAYMENT REQUESTS
-  fetchPaymentRequests: async () => {
+  fetchPaymentRequests: async (filters = {}) => {
+    const params =
+      filters.status && filters.status !== "all"
+        ? { status: filters.status }
+        : {};
+
     const res = await axios.get(`${API_BASE_URL}/subscriptions`, {
       headers: getAuthHeader(),
+      params,
     });
     return { payments: res.data.subscriptions };
   },
 
-  approvePayment: async (userId) => {
-    const expiry = 12;
-    const startDate = new Date().toISOString();
+  approvePayment: async (payment) => {
+    const subscriptionId = payment?._id || payment;
+
+    if (!subscriptionId) {
+      throw new Error("This payment request is missing its ID.");
+    }
+
     return await axios.put(
-      `${API_BASE_URL}/users/approve/${userId}?expiry=${expiry}&startDate=${startDate}`,
-      {},
+      `${API_BASE_URL}/subscriptions/${subscriptionId}/approve`,
+      {
+        membershipDurationMonths: derivePaymentDurationMonths(payment),
+      },
       { headers: getAuthHeader() }
     );
   },
@@ -300,7 +375,7 @@ const adminApi = {
 
   // MESSAGES
   fetchMessages: async () => {
-    const res = await axios.get(`${MESSAGES_BASE}`, {
+    const res = await axios.get(`${MESSAGES_BASE}/history`, {
       headers: getAuthHeader(),
     });
     return { messages: res.data };
@@ -332,27 +407,43 @@ const adminApi = {
     });
   },
 
+  // QR CODE
+  fetchQR: async () => {
+    const res = await axios.get(`${API_BASE_URL}/qr`, {
+      headers: getAuthHeader(),
+    });
+    return res.data;
+  },
+
+  uploadQR: async ({ name, image }) => {
+    const formData = new FormData();
+    formData.append("name", name);
+    formData.append("image", image);
+
+    const res = await axios.post(`${API_BASE_URL}/qr/upload`, formData, {
+      headers: getAuthHeader(),
+    });
+    return res.data;
+  },
+
   // ANALYTICS
-  fetchAnalytics: async () => {
+  fetchAnalytics: async (params = {}) => {
     const res = await axios.get(`${API_BASE_URL}/dashboard`, {
       headers: getAuthHeader(),
+      params,
     });
     return { data: res.data };
   },
 
   // USER CREATION
   createUser: async (formData) => {
-    try {
-      const res = await axios.post(`${BASE_URL}/users/register`, formData, {
-        headers: {
-          ...getAuthHeader(),
-          "Content-Type": "multipart/form-data",
-        },
-      });
-      return res.data;
-    } catch (error) {
-      throw error;
-    }
+    const res = await axios.post(`${API_BASE_URL}/users/add`, formData, {
+      headers: {
+        ...getAuthHeader(),
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    return res.data;
   },
 };
 

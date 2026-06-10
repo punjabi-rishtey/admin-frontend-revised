@@ -1,8 +1,35 @@
 // components/common/ConfirmDialog.jsx
-import { AlertTriangle } from 'lucide-react';
+import { useState } from "react";
+import { AlertTriangle } from "lucide-react";
 
-const ConfirmDialog = ({ isOpen, onClose, onConfirm, title, message }) => {
+const ConfirmDialog = ({
+  isOpen,
+  onClose,
+  onConfirm,
+  title,
+  message,
+  confirmText = "Confirm",
+  confirmVariant = "danger",
+}) => {
+  const [submitting, setSubmitting] = useState(false);
+
   if (!isOpen) return null;
+
+  const confirmClasses =
+    confirmVariant === "success"
+      ? "bg-green-600 hover:bg-green-700"
+      : confirmVariant === "primary"
+      ? "bg-purple-600 hover:bg-purple-700"
+      : "bg-red-600 hover:bg-red-700";
+
+  const handleConfirm = async () => {
+    try {
+      setSubmitting(true);
+      await Promise.resolve(onConfirm());
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 overflow-auto bg-black bg-opacity-50 flex items-center justify-center">
@@ -20,18 +47,17 @@ const ConfirmDialog = ({ isOpen, onClose, onConfirm, title, message }) => {
           <div className="flex space-x-3 justify-end">
             <button
               onClick={onClose}
+              disabled={submitting}
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
             >
               Cancel
             </button>
             <button
-              onClick={() => {
-                onConfirm();
-                onClose();
-              }}
-              className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+              onClick={handleConfirm}
+              disabled={submitting}
+              className={`px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors disabled:cursor-wait disabled:opacity-70 ${confirmClasses}`}
             >
-              Confirm
+              {confirmText}
             </button>
           </div>
         </div>

@@ -1,12 +1,11 @@
 // components/pages/Users.jsx
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Eye,
   Trash2,
   RotateCcw,
   Filter,
-  Download,
   ToggleLeft,
   ToggleRight,
   UserPlus,
@@ -25,16 +24,14 @@ const Users = () => {
   const [userToDelete, setUserToDelete] = useState(null);
   const [approveModalOpen, setApproveModalOpen] = useState(false);
   const [userToApprove, setUserToApprove] = useState(null);
+  const [statusConfirm, setStatusConfirm] = useState(null);
+  const [notice, setNotice] = useState(null);
   const [filters, setFilters] = useState({
     status: "all",
     includeDeleted: false,
   });
 
-  useEffect(() => {
-    fetchUsers();
-  }, [filters]);
-
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
       const { users } = await adminApi.fetchUsers(filters);
@@ -46,33 +43,93 @@ const Users = () => {
       setUsers(usersWithFlatDate);
     } catch (error) {
       console.error("Error fetching users:", error);
+      setNotice({
+        type: "error",
+        message: "Could not load users. Please try again.",
+      });
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters]);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
 
   const handleDelete = async () => {
     try {
       await adminApi.deleteUser(userToDelete._id);
       setShowDeleteDialog(false);
+      setNotice({
+        type: "success",
+        message: `${userToDelete.name} was deactivated. You can restore them from deleted users.`,
+      });
       fetchUsers();
     } catch (error) {
       console.error("Error deleting user:", error);
+      setNotice({
+        type: "error",
+        message:
+          error.response?.data?.message ||
+          "Could not deactivate this user. Please try again.",
+      });
     }
   };
 
-  const handleRestore = async (userId) => {
+  const handleRestore = async (user) => {
+    setStatusConfirm({
+      type: "restore",
+      user,
+      title: "Restore User",
+      message: `Restore ${user.name}? Their previous status will be restored where possible.`,
+      confirmText: "Restore User",
+      confirmVariant: "success",
+    });
+  };
+
+  const handleConfirmStatusAction = async () => {
+    if (!statusConfirm?.user) return;
+
     try {
-      await adminApi.restoreUser(userId);
-      fetchUsers();
+      if (statusConfirm.type === "restore") {
+        await adminApi.restoreUser(statusConfirm.user._id);
+        setNotice({
+          type: "success",
+          message: `${statusConfirm.user.name} was restored.`,
+        });
+      }
+
+      if (statusConfirm.type === "expire") {
+        await adminApi.updateUserStatus(statusConfirm.user._id, "Expired");
+        setNotice({
+          type: "success",
+          message: `${statusConfirm.user.name}'s membership was expired.`,
+        });
+      }
+
+      setStatusConfirm(null);
+      await fetchUsers();
     } catch (error) {
-      console.error("Error restoring user:", error);
+      console.error("Error updating user status:", error);
+      setNotice({
+        type: "error",
+        message:
+          error.response?.data?.message ||
+          "Could not update this user. Please try again.",
+      });
     }
   };
 
   const handleToggleMembership = (user) => {
     if (user.status === "Approved") {
-      adminApi.updateUserStatus(user._id, "Expired").then(fetchUsers);
+      setStatusConfirm({
+        type: "expire",
+        user,
+        title: "Expire Membership",
+        message: `Expire ${user.name}'s membership? They will no longer have active membership access.`,
+        confirmText: "Expire Membership",
+        confirmVariant: "danger",
+      });
     } else {
       setUserToApprove(user);
       setApproveModalOpen(true);
@@ -113,6 +170,8 @@ const Users = () => {
           Pending: "bg-yellow-100 text-yellow-800",
           Expired: "bg-red-100 text-red-800",
           Incomplete: "bg-gray-100 text-gray-800",
+          Unapproved: "bg-red-100 text-red-800",
+          Canceled: "bg-gray-100 text-gray-800",
         };
         return (
           <span
@@ -179,8 +238,8 @@ const Users = () => {
           className="p-1 rounded hover:bg-gray-100"
           title={
             user.status === "Approved"
-              ? "Deactivate Membership"
-              : "Activate Membership"
+              ? "Expire Membership"
+              : "Approve Membership"
           }
         >
           {user.status === "Approved" ? (
@@ -195,7 +254,7 @@ const Users = () => {
         <button
           onClick={(e) => {
             e.stopPropagation();
-            handleRestore(user._id);
+            handleRestore(user);
           }}
           className="p-1 rounded hover:bg-gray-100"
           title="Restore User"
@@ -243,6 +302,8 @@ const Users = () => {
             <option value="Pending">Pending</option>
             <option value="Expired">Expired</option>
             <option value="Incomplete">Incomplete</option>
+            <option value="Unapproved">Unapproved</option>
+            <option value="Canceled">Canceled</option>
           </select>
 
           <label className="flex items-center space-x-2">
@@ -259,15 +320,28 @@ const Users = () => {
             />
             <span className="text-sm text-gray-700">Show deleted users</span>
           </label>
-          <a
-            href="/add-user"
+          <button
+            type="button"
+            onClick={() => navigate("/add-user")}
             className="ml-auto mr-2 flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 "
           >
             <UserPlus className="h-4 w-4" />
             <span>Add Users</span>
-          </a>
+          </button>
         </div>
       </div>
+
+      {notice && (
+        <div
+          className={`rounded-lg border px-4 py-3 text-sm ${
+            notice.type === "success"
+              ? "border-green-200 bg-green-50 text-green-800"
+              : "border-red-200 bg-red-50 text-red-800"
+          }`}
+        >
+          {notice.message}
+        </div>
+      )}
 
       <DataTable
         columns={columns}
@@ -285,25 +359,35 @@ const Users = () => {
         onClose={() => setShowDeleteDialog(false)}
         onConfirm={handleDelete}
         title="Delete User"
-        message={`Are you sure you want to delete ${userToDelete?.name}? This will soft delete the user and they can be restored later.`}
+        message={`Deactivate ${userToDelete?.name}? They will be hidden from normal user lists, their membership will be canceled, and they can be restored later.`}
+        confirmText="Deactivate User"
+      />
+      <ConfirmDialog
+        isOpen={Boolean(statusConfirm)}
+        onClose={() => setStatusConfirm(null)}
+        onConfirm={handleConfirmStatusAction}
+        title={statusConfirm?.title}
+        message={statusConfirm?.message}
+        confirmText={statusConfirm?.confirmText}
+        confirmVariant={statusConfirm?.confirmVariant}
       />
       <ApproveModal
         isOpen={approveModalOpen}
         onClose={() => setApproveModalOpen(false)}
+        userName={userToApprove?.name}
         onConfirm={async (startDateIso, expiryMonths) => {
-          try {
-            await adminApi.approveUserWithDates(
-              userToApprove._id,
-              startDateIso,
-              expiryMonths
-            );
-            setApproveModalOpen(false);
-            setUserToApprove(null);
-            fetchUsers();
-          } catch (error) {
-            alert("Approval failed");
-            console.error(error);
-          }
+          await adminApi.approveUserWithDates(
+            userToApprove._id,
+            startDateIso,
+            expiryMonths
+          );
+          setNotice({
+            type: "success",
+            message: `${userToApprove.name}'s membership was approved.`,
+          });
+          setApproveModalOpen(false);
+          setUserToApprove(null);
+          await fetchUsers();
         }}
       />
     </div>

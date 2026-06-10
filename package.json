@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:qa": "vite --mode qa --host 127.0.0.1 --port 5174",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"

@@ -1,5 +1,5 @@
 // components/common/DataTable.jsx
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
 
 const DataTable = ({ 
@@ -36,9 +36,20 @@ const DataTable = ({
   });
 
   // Paginate data
-  const totalPages = Math.ceil(sortedData.length / itemsPerPage);
+  const totalPages = Math.max(1, Math.ceil(sortedData.length / itemsPerPage));
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedData = sortedData.slice(startIndex, startIndex + itemsPerPage);
+  const hasResults = sortedData.length > 0;
+  const startResult = hasResults ? startIndex + 1 : 0;
+  const endResult = hasResults
+    ? Math.min(startIndex + itemsPerPage, sortedData.length)
+    : 0;
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   const handleSort = (key) => {
     setSortConfig({
@@ -57,7 +68,10 @@ const DataTable = ({
               type="text"
               placeholder={searchPlaceholder}
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
               className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             />
           </div>
@@ -88,24 +102,35 @@ const DataTable = ({
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {paginatedData.map((item, index) => (
-              <tr
-                key={index}
-                onClick={() => onRowClick && onRowClick(item)}
-                className={`${onRowClick ? 'cursor-pointer hover:bg-gray-50' : ''}`}
-              >
-                {columns.map((column) => (
-                  <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {column.render ? column.render(item[column.key], item) : item[column.key]}
-                  </td>
-                ))}
-                {actions && (
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    {actions(item)}
-                  </td>
-                )}
+            {paginatedData.length > 0 ? (
+              paginatedData.map((item, index) => (
+                <tr
+                  key={index}
+                  onClick={() => onRowClick && onRowClick(item)}
+                  className={`${onRowClick ? 'cursor-pointer hover:bg-gray-50' : ''}`}
+                >
+                  {columns.map((column) => (
+                    <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {column.render ? column.render(item[column.key], item) : item[column.key]}
+                    </td>
+                  ))}
+                  {actions && (
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      {actions(item)}
+                    </td>
+                  )}
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td
+                  colSpan={columns.length + (actions ? 1 : 0)}
+                  className="px-6 py-8 text-center text-sm text-gray-500"
+                >
+                  No results found.
+                </td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
       </div>
@@ -113,8 +138,8 @@ const DataTable = ({
       <div className="bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
         <div className="flex items-center justify-between">
           <div className="text-sm text-gray-700">
-            Showing <span className="font-medium">{startIndex + 1}</span> to{' '}
-            <span className="font-medium">{Math.min(startIndex + itemsPerPage, sortedData.length)}</span> of{' '}
+            Showing <span className="font-medium">{startResult}</span> to{' '}
+            <span className="font-medium">{endResult}</span> of{' '}
             <span className="font-medium">{sortedData.length}</span> results
           </div>
           <div className="flex items-center space-x-2">
