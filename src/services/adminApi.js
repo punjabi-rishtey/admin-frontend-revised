@@ -10,6 +10,7 @@ const mockData = {
       name: "Rajesh Kumar",
       email: "rajesh.kumar@gmail.com",
       mobile: "+91-9876543210",
+      secondary_contact: "+91-9812345678",
       gender: "Male",
       dob: "1995-06-15",
       age: 28,
@@ -51,6 +52,7 @@ const mockData = {
         "https://via.placeholder.com/300x300",
         "https://via.placeholder.com/300x300",
       ],
+      profile_picture: "", // Empty means use first picture as fallback
       is_deleted: false,
       profileCompletion: 85,
       // Related data
@@ -103,6 +105,7 @@ const mockData = {
       name: "Simran Kaur",
       email: "simran.kaur@gmail.com",
       mobile: "+91-9876543211",
+      secondary_contact: "",
       gender: "Female",
       dob: "1997-03-22",
       age: 26,
@@ -141,6 +144,7 @@ const mockData = {
         exp_date: "2025-02-20",
       },
       profile_pictures: ["https://via.placeholder.com/300x300"],
+      profile_picture: "", // Empty means use first picture as fallback
       is_deleted: false,
       profileCompletion: 70,
       family: {
@@ -192,6 +196,7 @@ const mockData = {
       name: "Harpreet Singh",
       email: "harpreet.singh@gmail.com",
       mobile: "+91-9876543212",
+      secondary_contact: "+91-9898989898",
       gender: "Male",
       dob: "1993-11-08",
       age: 30,
@@ -209,6 +214,8 @@ const mockData = {
         register_date: "2024-01-10",
         exp_date: "2025-01-10",
       },
+      profile_pictures: [],
+      profile_picture: "",
       is_deleted: false,
     },
     {
@@ -216,6 +223,7 @@ const mockData = {
       name: "Manpreet Kaur",
       email: "manpreet.kaur@gmail.com",
       mobile: "+91-9876543213",
+      secondary_contact: "",
       gender: "Female",
       dob: "1998-07-25",
       age: 25,
@@ -233,6 +241,8 @@ const mockData = {
         register_date: "2023-01-25",
         exp_date: "2024-01-25",
       },
+      profile_pictures: [],
+      profile_picture: "",
       is_deleted: false,
     },
     {
@@ -240,6 +250,7 @@ const mockData = {
       name: "Gurpreet Singh",
       email: "gurpreet.singh@gmail.com",
       mobile: "+91-9876543214",
+      secondary_contact: "",
       gender: "Male",
       dob: "1991-12-10",
       age: 32,
@@ -257,6 +268,8 @@ const mockData = {
         register_date: "2024-03-05",
         exp_date: null,
       },
+      profile_pictures: [],
+      profile_picture: "",
       is_deleted: false,
     },
   ],
@@ -746,6 +759,23 @@ const mockApi = {
         inquiry.status = "closed";
       }
       return { data: inquiry };
+    }
+
+    if (url.includes("/set-profile-picture")) {
+      const id = url.match(/users\/(\w+)\/set-profile-picture/)?.[1];
+      const user = mockData.users.find((u) => u._id === id);
+      if (user) {
+        user.profile_picture = data.imageUrl || "";
+        // Get the effective profile picture (selected or first in array)
+        const effectiveProfilePic = user.profile_picture || (user.profile_pictures && user.profile_pictures.length > 0 ? user.profile_pictures[0] : "");
+        return {
+          data: {
+            message: data.imageUrl ? "Profile picture updated successfully" : "Profile picture cleared, will use first uploaded picture",
+            profile_picture: effectiveProfilePic,
+          },
+        };
+      }
+      return { data: { message: "User not found" } };
     }
 
     return { data: { success: true } };

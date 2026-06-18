@@ -43,6 +43,7 @@ const AddUser = () => {
     hobbies: "",
     about_myself: "",
     looking_for: "",
+    secondary_contact: "",
 
     // Birth details
     birth_time: "",
@@ -195,6 +196,8 @@ const AddUser = () => {
         submitData.append("about_myself", formData.about_myself);
       if (formData.looking_for)
         submitData.append("looking_for", formData.looking_for);
+      if (formData.secondary_contact)
+        submitData.append("secondary_contact", formData.secondary_contact);
 
       // Add nested fields
       const userData = {
@@ -366,6 +369,21 @@ const AddUser = () => {
                 required
                 pattern="[0-9]{10}"
                 placeholder="10 digit number"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                <Phone className="inline h-4 w-4 mr-1" />
+                Secondary Contact
+              </label>
+              <input
+                type="tel"
+                name="secondary_contact"
+                value={formData.secondary_contact}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                placeholder="Alternate phone number"
               />
             </div>
 
