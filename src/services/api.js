@@ -190,6 +190,14 @@ const adminApi = {
     }
   },
 
+  updateUserVisibility: async (id, profileVisibility) => {
+    const payload = { profile_visibility: profileVisibility };
+    const res = await axios.put(`${API_BASE_URL}/user/${id}/profile`, payload, {
+      headers: { ...getAuthHeader(), "Content-Type": "application/json" },
+    });
+    return res.data;
+  },
+
   approveUserWithDates: async (userId, startDate, expiryMonths) => {
     return await axios.put(
       `${API_BASE_URL}/users/approve/${userId}?startDate=${startDate}&expiry=${expiryMonths}`,

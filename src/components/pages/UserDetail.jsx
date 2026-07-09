@@ -20,6 +20,7 @@ import {
   RotateCcw,
   Camera,
   ChevronDown,
+  Lock,
 } from "lucide-react";
 import LoadingSpinner from "../common/LoadingSpinner";
 import ConfirmDialog from "../common/ConfirmDialog";
@@ -37,6 +38,8 @@ const UserDetail = () => {
   const [approveModalOpen, setApproveModalOpen] = useState(false);
   const [statusConfirm, setStatusConfirm] = useState(null);
   const [notice, setNotice] = useState(null);
+  const [updatingPrivacy, setUpdatingPrivacy] = useState(false);
+  const isPrivateProfile = user?.profile_visibility === "private";
 
   const fetchUserDetails = useCallback(async () => {
     try {
@@ -230,6 +233,34 @@ const UserDetail = () => {
     }
   };
 
+  const handleTogglePrivacy = async () => {
+    if (!user) return;
+
+    const nextVisibility = isPrivateProfile ? "public" : "private";
+    setUpdatingPrivacy(true);
+    try {
+      await adminApi.updateUserVisibility(user._id, nextVisibility);
+      setNotice({
+        type: "success",
+        message:
+          nextVisibility === "private"
+            ? `${user.name} is now hidden from members.`
+            : `${user.name} is now visible to members.`,
+      });
+      await fetchUserDetails();
+    } catch (error) {
+      console.error("Error updating profile visibility:", error);
+      setNotice({
+        type: "error",
+        message:
+          error.response?.data?.message ||
+          "Could not update private mode. Please try again.",
+      });
+    } finally {
+      setUpdatingPrivacy(false);
+    }
+  };
+
   const handleApproveMembership = async (startDateIso, expiryMonths) => {
     await adminApi.approveUserWithDates(user._id, startDateIso, expiryMonths);
     setNotice({
@@ -270,6 +301,11 @@ const UserDetail = () => {
                 {user.is_deleted && (
                   <span className="px-3 py-1 text-sm rounded-full font-medium bg-red-100 text-red-800">
                     Deleted
+                  </span>
+                )}
+                {isPrivateProfile && (
+                  <span className="px-3 py-1 text-sm rounded-full font-medium bg-purple-100 text-purple-800">
+                    Private
                   </span>
                 )}
               </div>
@@ -355,6 +391,31 @@ const UserDetail = () => {
                     <span>Approve Membership</span>
                   </>
                 )}
+              </button>
+            )}
+
+            {!user.is_deleted && (
+              <button
+                type="button"
+                onClick={handleTogglePrivacy}
+                disabled={updatingPrivacy}
+                className="flex items-center space-x-2 px-4 py-2 rounded-lg border transition-colors hover:bg-gray-50 disabled:opacity-50"
+                title={
+                  isPrivateProfile ? "Make Profile Public" : "Enable Private Mode"
+                }
+              >
+                <Lock
+                  className={`h-5 w-5 ${
+                    isPrivateProfile ? "text-purple-600" : "text-gray-500"
+                  }`}
+                />
+                <span>
+                  {updatingPrivacy
+                    ? "Updating..."
+                    : isPrivateProfile
+                    ? "Make Public"
+                    : "Make Private"}
+                </span>
               </button>
             )}
 
@@ -455,6 +516,10 @@ const UserDetail = () => {
           <InfoItem label="Marital Status" value={user.marital_status} />
           <InfoItem label="Mangalik" value={user.mangalik || "Not specified"} />
           <InfoItem label="Language" value={user.language || "Not specified"} />
+          <InfoItem
+            label="Visibility"
+            value={isPrivateProfile ? "Private" : "Public"}
+          />
         </div>
         {user.hobbies && user.hobbies.length > 0 && (
           <div className="mt-4">

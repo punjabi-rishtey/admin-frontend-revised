@@ -46,6 +46,8 @@ const normalizeUserData = (data) => {
       mangalik: normalize(data.mangalik, selectOptions.mangalik),
       about_myself: data.about_myself ?? "",
       looking_for: data.looking_for ?? "",
+      profile_visibility:
+        data.profile_visibility === "private" ? "private" : "public",
       birth_details: data.birth_details || { birth_time: "", birth_place: "" },
       physical_attributes: {
         skin_tone: normalize(

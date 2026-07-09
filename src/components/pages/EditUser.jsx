@@ -53,6 +53,7 @@ const EditUserPage = () => {
     family: true,
     profession: true,
     photos: true,
+    privacy: true,
     password: true,
   });
   const [previewUrl, setPreviewUrl] = useState(null);
@@ -230,6 +231,13 @@ const EditUserPage = () => {
           };
         } else if (submitterText.includes("Location")) {
           dataToSend = { location: safeUserData.location };
+        } else if (submitterText.includes("Private Mode")) {
+          dataToSend = {
+            profile_visibility:
+              safeUserData.profile_visibility === "private"
+                ? "private"
+                : "public",
+          };
         } else {
           dataToSend = {
             name: safeUserData.name,
@@ -249,6 +257,10 @@ const EditUserPage = () => {
               .filter((h) => h),
             about_myself: safeUserData.about_myself,
             looking_for: safeUserData.looking_for,
+            profile_visibility:
+              safeUserData.profile_visibility === "private"
+                ? "private"
+                : "public",
           };
         }
       }
@@ -375,6 +387,74 @@ const EditUserPage = () => {
           isExpanded={expandedSections.photos}
           toggleSection={() => toggleSection("photos")}
         />
+
+        <SectionCard
+          title="Private Mode"
+          icon={<Lock className="h-5 w-5 text-gray-600" />}
+          isExpanded={expandedSections.privacy}
+          toggleSection={() => toggleSection("privacy")}
+        >
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-900">
+                Hide this profile from members
+              </p>
+              <p className="mt-1 text-sm text-gray-600">
+                Admins can still view it. Private members can browse, but
+                contact details are hidden.
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={formData.user.profile_visibility === "private"}
+              onClick={() =>
+                setFormData((prev) => ({
+                  ...prev,
+                  user: {
+                    ...prev.user,
+                    profile_visibility:
+                      prev.user.profile_visibility === "private"
+                        ? "public"
+                        : "private",
+                  },
+                }))
+              }
+              className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors ${
+                formData.user.profile_visibility === "private"
+                  ? "bg-purple-600"
+                  : "bg-gray-300"
+              }`}
+            >
+              <span
+                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                  formData.user.profile_visibility === "private"
+                    ? "translate-x-6"
+                    : "translate-x-1"
+                }`}
+              />
+            </button>
+          </div>
+          <div className="mt-4 flex items-center justify-between gap-3">
+            <span
+              className={`px-3 py-1 text-sm rounded-full font-medium ${
+                formData.user.profile_visibility === "private"
+                  ? "bg-purple-100 text-purple-800"
+                  : "bg-gray-100 text-gray-800"
+              }`}
+            >
+              {formData.user.profile_visibility === "private"
+                ? "Private"
+                : "Public"}
+            </span>
+            <button
+              onClick={(e) => handleSubmit(e, "user")}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+            >
+              Save Private Mode
+            </button>
+          </div>
+        </SectionCard>
 
         {/* Basic Information */}
         <SectionCard
