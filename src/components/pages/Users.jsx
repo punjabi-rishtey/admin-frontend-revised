@@ -9,6 +9,7 @@ import {
   ToggleLeft,
   ToggleRight,
   UserPlus,
+  Lock,
 } from "lucide-react";
 import DataTable from "../common/DataTable";
 import ConfirmDialog from "../common/ConfirmDialog";
@@ -156,6 +157,12 @@ const Users = () => {
               Deleted
             </span>
           )}
+          {user.profile_visibility === "private" && (
+            <span className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full font-medium bg-purple-100 text-purple-800">
+              <Lock className="h-3 w-3" />
+              Private
+            </span>
+          )}
         </div>
       ),
     },
@@ -180,6 +187,25 @@ const Users = () => {
             }`}
           >
             {value}
+          </span>
+        );
+      },
+    },
+    {
+      key: "profile_visibility",
+      label: "Visibility",
+      sortable: true,
+      render: (value) => {
+        const isPrivate = value === "private";
+        return (
+          <span
+            className={`px-2 py-1 text-xs rounded-full font-medium ${
+              isPrivate
+                ? "bg-purple-100 text-purple-800"
+                : "bg-gray-100 text-gray-800"
+            }`}
+          >
+            {isPrivate ? "Private" : "Public"}
           </span>
         );
       },
