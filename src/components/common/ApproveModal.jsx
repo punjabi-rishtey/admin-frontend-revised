@@ -39,6 +39,7 @@ const ApproveModal = ({
     } catch (approvalError) {
       setError(
         approvalError.response?.data?.message ||
+          approvalError.response?.data?.error ||
           approvalError.message ||
           "Could not approve the membership. Please try again."
       );
