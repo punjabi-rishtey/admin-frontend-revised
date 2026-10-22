@@ -402,14 +402,16 @@ const Users = () => {
         onClose={() => setApproveModalOpen(false)}
         userName={userToApprove?.name}
         onConfirm={async (startDateIso, expiryMonths) => {
-          await adminApi.approveUserWithDates(
+          const response = await adminApi.approveUserWithDates(
             userToApprove._id,
             startDateIso,
             expiryMonths
           );
           setNotice({
             type: "success",
-            message: `${userToApprove.name}'s membership was approved.`,
+            message:
+              response.data?.message ||
+              `${userToApprove.name}'s membership was approved.`,
           });
           setApproveModalOpen(false);
           setUserToApprove(null);

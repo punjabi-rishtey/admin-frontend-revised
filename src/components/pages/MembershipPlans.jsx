@@ -7,6 +7,13 @@ import ConfirmDialog from "../common/ConfirmDialog";
 import LoadingSpinner from "../common/LoadingSpinner";
 import adminApi from "../../services/api";
 
+const formatMembershipLength = (months) => {
+  if (months === 12) return "1 year";
+  if (months === 18) return "1.5 years";
+  if (!months) return "";
+  return `${months} month${months === 1 ? "" : "s"}`;
+};
+
 const MembershipPlans = () => {
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -161,13 +168,13 @@ const MembershipPlans = () => {
       key: "price",
       label: "Price",
       sortable: true,
-      render: (value) => `₹${value}`,
+      render: (value) => `₹${Number(value).toLocaleString("en-IN")}`,
     },
     {
       key: "duration",
       label: "Duration",
       sortable: true,
-      render: (value) => `${value} month${Number(value) === 1 ? "" : "s"}`,
+      render: (value) => formatMembershipLength(Number(value)) || `${value} months`,
     },
     {
       key: "premiumProfilesView",
@@ -232,10 +239,12 @@ const MembershipPlans = () => {
               <Award className="h-6 w-6 text-purple-600" />
             </div>
             <div className="text-3xl font-bold text-gray-900 mb-2">
-              ₹{plan.price}
+              ₹{Number(plan.price).toLocaleString("en-IN")}
             </div>
             <div className="text-sm text-gray-600 mb-4">
-              {plan.duration} month{Number(plan.duration) === 1 ? "" : "s"} validity
+              {formatMembershipLength(Number(plan.duration)) ||
+                `${plan.duration} months`}{" "}
+              validity
             </div>
             <div className="text-sm text-gray-600">
               {/* <strong>Profile Views:</strong> {plan.premiumProfilesView} */}

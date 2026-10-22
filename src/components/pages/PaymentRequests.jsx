@@ -6,6 +6,30 @@ import ConfirmDialog from "../common/ConfirmDialog";
 import LoadingSpinner from "../common/LoadingSpinner";
 import adminApi from "../../services/api";
 
+const formatMembershipLength = (months) => {
+  if (months === 12) return "1 year";
+  if (months === 18) return "1.5 years";
+  if (!months) return "";
+  return `${months} month${months === 1 ? "" : "s"}`;
+};
+
+const paymentPlanName = (payment, months) => {
+  if (payment?.planName) return payment.planName;
+  if (months === 18) return "Hallmark";
+  if (months === 12) return "Gold";
+  return "";
+};
+
+const paymentAmount = (payment, months) => {
+  const storedPrice = Number(payment?.planPrice);
+  if (Number.isFinite(storedPrice) && storedPrice > 0) return storedPrice;
+  if (months === 18) return 3000;
+  if (months === 12) return 2000;
+  return null;
+};
+
+const formatInr = (amount) => `₹${Number(amount).toLocaleString("en-IN")}`;
+
 const PaymentRequests = () => {
   const [payments, setPayments] = useState([]);
   const [summaryCounts, setSummaryCounts] = useState({
@@ -109,7 +133,7 @@ const PaymentRequests = () => {
   };
 
   const formatDurationMonths = (months) =>
-    months ? `${months} month${months === 1 ? "" : "s"}` : "the saved duration";
+    formatMembershipLength(months) || "the saved duration";
 
   const handleApprove = async () => {
     try {
@@ -175,6 +199,26 @@ const PaymentRequests = () => {
           <div className="text-sm text-gray-500">{payment.phoneNumber}</div>
         </div>
       ),
+    },
+    {
+      key: "planName",
+      label: "Plan",
+      render: (_value, payment) => {
+        const months = getPaymentDurationMonths(payment);
+        const name = paymentPlanName(payment, months);
+        const amount = paymentAmount(payment, months);
+        const length = formatMembershipLength(months);
+        const detail = [amount ? formatInr(amount) : null, length]
+          .filter(Boolean)
+          .join(" · ");
+
+        return (
+          <div>
+            <div className="font-medium">{name || "Membership"}</div>
+            {detail && <div className="text-sm text-gray-500">{detail}</div>}
+          </div>
+        );
+      },
     },
     {
       key: "createdAt",
@@ -348,9 +392,26 @@ const PaymentRequests = () => {
         onClose={() => setShowApproveDialog(false)}
         onConfirm={handleApprove}
         title="Approve Payment"
-        message={`Approve payment for ${selectedPayment?.fullName}? This will activate their profile for ${formatDurationMonths(
+        message={`Approve the ${
+          paymentPlanName(
+            selectedPayment,
+            getPaymentDurationMonths(selectedPayment)
+          ) || "membership"
+        } payment for ${selectedPayment?.fullName}? This activates their profile for ${formatDurationMonths(
           getPaymentDurationMonths(selectedPayment)
-        )}.`}
+        )}${
+          paymentAmount(
+            selectedPayment,
+            getPaymentDurationMonths(selectedPayment)
+          )
+            ? ` (${formatInr(
+                paymentAmount(
+                  selectedPayment,
+                  getPaymentDurationMonths(selectedPayment)
+                )
+              )})`
+            : ""
+        }.`}
       />
 
       <ConfirmDialog
@@ -407,6 +468,8 @@ const PaymentDetailModal = ({ payment, onClose }) => {
   }
 
   const hasDuration = Number.isInteger(durationMonths) && durationMonths > 0;
+  const planName = paymentPlanName(payment, durationMonths);
+  const amount = paymentAmount(payment, durationMonths);
 
   return (
     <div className="fixed inset-0 z-50 overflow-auto bg-black bg-opacity-50 flex items-center justify-center">
@@ -454,11 +517,25 @@ const PaymentDetailModal = ({ payment, onClose }) => {
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-500">
+                  Plan
+                </label>
+                <p className="text-gray-900">{planName || "Membership"}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">
+                  Amount
+                </label>
+                <p className="text-gray-900">
+                  {amount ? formatInr(amount) : "Not saved"}
+                </p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">
                   Duration
                 </label>
                 <p className="text-gray-900">
                   {hasDuration
-                    ? `${durationMonths} month${durationMonths === 1 ? "" : "s"}`
+                    ? formatMembershipLength(durationMonths)
                     : "Not saved"}
                 </p>
               </div>

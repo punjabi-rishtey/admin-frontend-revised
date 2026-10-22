@@ -262,10 +262,15 @@ const UserDetail = () => {
   };
 
   const handleApproveMembership = async (startDateIso, expiryMonths) => {
-    await adminApi.approveUserWithDates(user._id, startDateIso, expiryMonths);
+    const response = await adminApi.approveUserWithDates(
+      user._id,
+      startDateIso,
+      expiryMonths
+    );
     setNotice({
       type: "success",
-      message: `${user.name}'s membership was approved.`,
+      message:
+        response.data?.message || `${user.name}'s membership was approved.`,
     });
     setApproveModalOpen(false);
     await fetchUserDetails();
