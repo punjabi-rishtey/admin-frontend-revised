@@ -50,32 +50,18 @@ const PaymentRequests = () => {
   const fetchPayments = useCallback(async () => {
     try {
       setLoading(true);
-      const [filteredResponse, allResponse] = await Promise.all([
-        adminApi.fetchPaymentRequests({
-          status: filter,
-        }),
-        filter === "all"
-          ? Promise.resolve(null)
-          : adminApi.fetchPaymentRequests({ status: "all" }),
-      ]);
-
-      const filteredPayments = filteredResponse.payments || [];
-      const allPayments = filter === "all" ? filteredPayments : allResponse?.payments || [];
+      const response = await adminApi.fetchPaymentRequests({ status: filter });
+      const filteredPayments = response.payments || [];
+      const counts = response.counts || {
+        pending: 0,
+        approved: 0,
+        rejected: 0,
+        expired: 0,
+        total: filteredPayments.length,
+      };
 
       setPayments(filteredPayments);
-      setSummaryCounts({
-        pending: allPayments.filter((payment) => payment.paymentStatus === "pending")
-          .length,
-        approved: allPayments.filter(
-          (payment) => payment.paymentStatus === "approved"
-        ).length,
-        rejected: allPayments.filter(
-          (payment) => payment.paymentStatus === "rejected"
-        ).length,
-        expired: allPayments.filter((payment) => payment.paymentStatus === "expired")
-          .length,
-        total: allPayments.length,
-      });
+      setSummaryCounts(counts);
     } catch (error) {
       setNotice({
         type: "error",
@@ -323,9 +309,15 @@ const PaymentRequests = () => {
         <div className="flex items-center space-x-2">
           <Clock className="h-5 w-5 text-yellow-500" />
           <span className="text-sm text-gray-600">
-            {filter === "all"
-              ? `${summaryCounts.pending} pending approvals`
-              : `${payments.length} ${filter} requests shown • ${summaryCounts.pending} pending approvals`}
+            {(filter === "all" ? summaryCounts.total : summaryCounts[filter] || 0) >
+            payments.length
+              ? `Newest ${payments.length} of ${
+                  filter === "all" ? summaryCounts.total : summaryCounts[filter]
+                } ${filter === "all" ? "" : `${filter} `}requests • `
+              : filter === "all"
+                ? ""
+                : `${payments.length} ${filter} requests • `}
+            {summaryCounts.pending} pending approvals
           </span>
         </div>
       </div>

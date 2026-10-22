@@ -308,16 +308,20 @@ const adminApi = {
 
   // PAYMENT REQUESTS
   fetchPaymentRequests: async (filters = {}) => {
-    const params =
-      filters.status && filters.status !== "all"
-        ? { status: filters.status }
-        : {};
+    const params = {};
+    if (filters.status) {
+      params.status = filters.status;
+    }
 
     const res = await axios.get(`${API_BASE_URL}/subscriptions`, {
       headers: getAuthHeader(),
       params,
     });
-    return { payments: res.data.subscriptions };
+    return {
+      payments: res.data.subscriptions,
+      counts: res.data.counts,
+      limit: res.data.limit,
+    };
   },
 
   approvePayment: async (payment) => {
