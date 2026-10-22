@@ -216,11 +216,18 @@ const adminApi = {
     );
   },
 
-  rejectPayment: async (userId) => {
-    const payload = { status: "Canceled" };
-    return await axios.put(`${API_BASE_URL}/user/${userId}/profile`, payload, {
-      headers: getAuthHeader(),
-    });
+  rejectPayment: async (payment) => {
+    const subscriptionId = payment?._id || payment;
+
+    if (!subscriptionId) {
+      throw new Error("This payment request is missing its ID.");
+    }
+
+    return await axios.put(
+      `${API_BASE_URL}/subscriptions/${subscriptionId}/reject`,
+      {},
+      { headers: getAuthHeader() }
+    );
   },
 
   // TESTIMONIALS

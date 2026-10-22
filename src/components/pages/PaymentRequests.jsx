@@ -93,9 +93,6 @@ const PaymentRequests = () => {
     fetchPayments();
   }, [fetchPayments]);
 
-  const getPaymentUserId = (payment) =>
-    typeof payment?.user === "object" ? payment.user?._id : payment?.user;
-
   const getPaymentDurationMonths = (payment) => {
     const storedDuration = Number(payment?.membershipDurationMonths);
 
@@ -163,13 +160,12 @@ const PaymentRequests = () => {
 
   const handleReject = async () => {
     try {
-      const userId = getPaymentUserId(selectedPayment);
-      if (!userId) {
-        throw new Error("This payment is not linked to a user.");
+      if (!selectedPayment?._id) {
+        throw new Error("This payment request is missing its ID.");
       }
 
       setActionLoading(true);
-      await adminApi.rejectPayment(userId);
+      await adminApi.rejectPayment(selectedPayment);
       setNotice({ type: "success", message: "Payment rejected." });
       setSelectedPayment(null);
       setShowRejectDialog(false);
@@ -419,7 +415,7 @@ const PaymentRequests = () => {
         onClose={() => setShowRejectDialog(false)}
         onConfirm={handleReject}
         title="Reject Payment"
-        message={`Are you sure you want to reject payment for ${selectedPayment?.fullName}?`}
+        message={`Reject this payment for ${selectedPayment?.fullName}? Their current membership stays as it is.`}
       />
 
       {selectedPayment && !showApproveDialog && !showRejectDialog && (
