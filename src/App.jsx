@@ -16,7 +16,6 @@ import Analytics from "./components/pages/Analytics";
 import CustomerSupport from "./components/pages/CustomerSupport";
 import PaymentRequests from "./components/pages/PaymentRequests";
 import MembershipPlans from "./components/pages/MembershipPlans";
-import Coupons from "./components/pages/Coupons";
 import Messages from "./components/pages/Messages";
 import Reviews from "./components/pages/Reviews";
 import QRCode from "./components/pages/QRCode";
@@ -76,7 +75,6 @@ function App() {
           <Route path="support" element={<CustomerSupport />} />
           <Route path="payments" element={<PaymentRequests />} />
           <Route path="membership" element={<MembershipPlans />} />
-          <Route path="coupons" element={<Coupons />} />
           <Route path="messages" element={<Messages />} />
           <Route path="reviews" element={<Reviews />} />
           {/* <Route path="utility" element={<Utility />} /> */}

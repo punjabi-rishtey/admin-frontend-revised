@@ -222,16 +222,6 @@ const PaymentRequests = () => {
       sortable: true,
       render: (value) => new Date(value).toLocaleDateString(),
     },
-    {
-      key: "couponCode",
-      label: "Coupon",
-      render: (value) => value || "-",
-    },
-    {
-      key: "discountAmount",
-      label: "Discount",
-      render: (value) => (value > 0 ? `₹${value}` : "-"),
-    },
     // {
     //   key: "status",
     //   label: "Status",

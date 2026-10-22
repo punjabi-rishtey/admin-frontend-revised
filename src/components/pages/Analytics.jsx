@@ -5,7 +5,6 @@ import {
   AlertCircle,
   Clock,
   PieChart,
-  Ticket,
   MessageSquare,
   Mail,
   Heart,
@@ -103,12 +102,6 @@ const Analytics = () => {
           color="blue"
         />
         <StatCard
-          title="Active Coupons"
-          value={analytics?.activeCoupons || 0}
-          icon={Ticket}
-          color="green"
-        />
-        <StatCard
           title="Open Inquiries"
           value={analytics?.openInquiries || 0}
           icon={Mail}
@@ -177,18 +170,6 @@ const Analytics = () => {
               icon={Star}
               label="Reviews"
               value={analytics?.reviewCount || 0}
-            />
-            <SummaryBadge
-              icon={Ticket}
-              label="Coupon Uses"
-              value={analytics?.couponUsageCount || 0}
-            />
-            <SummaryBadge
-              icon={Ticket}
-              label="Total Discount Given"
-              value={`₹${(analytics?.totalDiscountAmount || 0).toLocaleString(
-                "en-IN"
-              )}`}
             />
           </div>
         </div>

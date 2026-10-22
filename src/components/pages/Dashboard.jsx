@@ -6,7 +6,6 @@ import {
   Heart,
   AlertCircle,
   MessageSquare,
-  Ticket,
   Star,
 } from "lucide-react";
 import StatCard from "../common/StatCard";
@@ -177,11 +176,6 @@ const Dashboard = () => {
               icon={Star}
               label="Reviews"
               value={stats?.reviewCount || 0}
-            />
-            <SummaryRow
-              icon={Ticket}
-              label="Active Coupons"
-              value={stats?.activeCoupons || 0}
             />
             <SummaryRow
               icon={MessageSquare}

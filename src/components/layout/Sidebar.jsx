@@ -25,7 +25,6 @@ const Sidebar = () => {
     { path: "/support", name: "Support", icon: HelpCircle },
     { path: "/payments", name: "Payments", icon: CreditCard },
     { path: "/membership", name: "Membership", icon: Tag },
-    { path: "/coupons", name: "Coupons", icon: Tag },
     { path: "/messages", name: "Messages", icon: MessageSquare },
     { path: "/reviews", name: "Reviews", icon: Star },
     // { path: '/utility', name: 'Utility', icon: Settings },
