@@ -21,6 +21,7 @@ import {
   Camera,
   ChevronDown,
   Lock,
+  Award,
 } from "lucide-react";
 import LoadingSpinner from "../common/LoadingSpinner";
 import ConfirmDialog from "../common/ConfirmDialog";
@@ -40,6 +41,18 @@ const UserDetail = () => {
   const [notice, setNotice] = useState(null);
   const [updatingPrivacy, setUpdatingPrivacy] = useState(false);
   const isPrivateProfile = user?.profile_visibility === "private";
+
+  const getPlanInfo = (targetUser) => {
+    if (!targetUser || targetUser.status !== "Approved") return null;
+    const sub = targetUser.subscription;
+    const planName = String(sub?.planName || "").trim();
+    if (planName) return planName;
+    const months = Number(sub?.membershipDurationMonths);
+    if (months === 18) return "Hallmark (1.5 years)";
+    if (months === 12) return "Gold (1 year)";
+    if (Number.isInteger(months) && months > 0) return `${months} months`;
+    return null;
+  };
 
   const fetchUserDetails = useCallback(async () => {
     try {
@@ -360,6 +373,12 @@ const UserDetail = () => {
                     </div>
                   )}
                 </div>
+                {getPlanInfo(user) && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                    <Award className="h-3 w-3 text-amber-600" />
+                    {getPlanInfo(user)}
+                  </span>
+                )}
                 <span className="text-sm text-gray-500">
                   Registered:{" "}
                   {new Date(user.metadata?.register_date).toLocaleDateString()}

@@ -8,7 +8,7 @@ const ApproveModal = ({
   title = "Approve Membership",
 }) => {
   const [startDate, setStartDate] = useState("");
-  const [expiryMonths, setExpiryMonths] = useState(6);
+  const [expiryMonths, setExpiryMonths] = useState(12);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -72,16 +72,46 @@ const ApproveModal = ({
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">
-              Number of Months (Expiry)
+            <label className="block text-sm font-medium mb-1.5">
+              Membership Plan & Duration
             </label>
-            <input
-              type="number"
-              value={expiryMonths}
-              min="1"
-              onChange={(e) => setExpiryMonths(e.target.value)}
-              className="w-full border rounded px-3 py-2"
-            />
+            <div className="grid grid-cols-2 gap-2 mb-2">
+              <button
+                type="button"
+                onClick={() => setExpiryMonths(12)}
+                className={`px-3 py-2 text-xs rounded-lg border font-medium transition-colors text-left ${
+                  Number(expiryMonths) === 12
+                    ? "bg-purple-50 border-purple-600 text-purple-900 ring-1 ring-purple-600"
+                    : "bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                <div className="font-semibold">Gold</div>
+                <div className="text-[11px] text-gray-500">12 months (1 yr)</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setExpiryMonths(18)}
+                className={`px-3 py-2 text-xs rounded-lg border font-medium transition-colors text-left ${
+                  Number(expiryMonths) === 18
+                    ? "bg-purple-50 border-purple-600 text-purple-900 ring-1 ring-purple-600"
+                    : "bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                <div className="font-semibold">Hallmark</div>
+                <div className="text-[11px] text-gray-500">18 months (1.5 yrs)</div>
+              </button>
+            </div>
+            <div className="flex items-center space-x-2">
+              <input
+                type="number"
+                value={expiryMonths}
+                min="1"
+                onChange={(e) => setExpiryMonths(e.target.value)}
+                className="w-full border rounded px-3 py-1.5 text-sm"
+                placeholder="Number of months"
+              />
+              <span className="text-xs text-gray-500 whitespace-nowrap">months</span>
+            </div>
           </div>
         </div>
 
