@@ -1,9 +1,36 @@
 // components/layout/Navbar.jsx
+import { useEffect, useState } from "react";
 import { LogOut, User } from "lucide-react";
 
+const getSavedEmail = () => {
+  const direct = localStorage.getItem("adminEmail");
+  if (direct) return direct;
+
+  const remembered = localStorage.getItem("rememberedAdminEmail");
+  if (remembered) return remembered;
+
+  const token = localStorage.getItem("token");
+  if (token) {
+    try {
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      if (payload?.email) return payload.email;
+    } catch {
+      // fallback
+    }
+  }
+  return "Admin";
+};
+
 const Navbar = ({ setIsAuthenticated }) => {
+  const [adminEmail, setAdminEmail] = useState(getSavedEmail);
+
+  useEffect(() => {
+    setAdminEmail(getSavedEmail());
+  }, []);
+
   const handleLogout = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("adminEmail");
     setIsAuthenticated(false);
   };
 
@@ -16,9 +43,7 @@ const Navbar = ({ setIsAuthenticated }) => {
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
               <User className="h-5 w-5 text-gray-600" />
-              <span className="text-gray-700 font-medium">
-                admin@punjabi-rishtey.com
-              </span>
+              <span className="text-gray-700 font-medium">{adminEmail}</span>
             </div>
 
             <button
