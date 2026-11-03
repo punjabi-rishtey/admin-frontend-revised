@@ -125,9 +125,13 @@ const Reviews = () => {
     }
   };
 
-  const handleMove = async (index, direction, e) => {
+  const handleMove = async (reviewId, direction, e) => {
     e.stopPropagation();
     if (isReordering) return;
+    const index = reviews.findIndex(
+      (r) => String(r._id || r.id) === String(reviewId)
+    );
+    if (index === -1) return;
     const targetIndex = direction === "up" ? index - 1 : index + 1;
     if (targetIndex < 0 || targetIndex >= reviews.length) return;
 
@@ -144,7 +148,7 @@ const Reviews = () => {
 
     try {
       setIsReordering(true);
-      const orderedIds = updatedWithOrder.map((item) => item._id);
+      const orderedIds = updatedWithOrder.map((item) => item._id || item.id);
       await adminApi.reorderReviews(orderedIds);
       setNotice({ type: "success", message: "Review sequence updated." });
     } catch (error) {
@@ -196,8 +200,20 @@ const Reviews = () => {
     {
       key: "order",
       label: "Position",
-      render: (value, row, index) => {
-        const displayOrder = typeof value === "number" && value > 0 ? value : index + 1;
+      render: (value, row) => {
+        const rowId = row._id || row.id;
+        const index = reviews.findIndex(
+          (r) => String(r._id || r.id) === String(rowId)
+        );
+        const displayOrder =
+          index !== -1
+            ? index + 1
+            : typeof value === "number" && value > 0
+            ? value
+            : 1;
+        const isFirst = index === 0;
+        const isLast = index === reviews.length - 1;
+
         return (
           <div
             className="flex items-center space-x-1"
@@ -209,19 +225,27 @@ const Reviews = () => {
             <div className="flex flex-col">
               <button
                 type="button"
-                disabled={index === 0 || isReordering}
-                onClick={(e) => handleMove(index, "up", e)}
-                title="Move Up in sequence"
-                className="p-0.5 text-gray-500 hover:text-purple-600 disabled:opacity-20 disabled:hover:text-gray-500 rounded hover:bg-gray-100 transition-colors"
+                disabled={isFirst || isReordering}
+                onClick={(e) => handleMove(rowId, "up", e)}
+                title={isFirst ? "Already at top" : "Move Up in sequence"}
+                className={`p-0.5 rounded transition-colors ${
+                  isFirst || isReordering
+                    ? "opacity-20 cursor-not-allowed text-gray-400"
+                    : "text-gray-600 hover:text-purple-600 hover:bg-gray-100 cursor-pointer"
+                }`}
               >
                 <ChevronUp className="h-4 w-4" />
               </button>
               <button
                 type="button"
-                disabled={index === reviews.length - 1 || isReordering}
-                onClick={(e) => handleMove(index, "down", e)}
-                title="Move Down in sequence"
-                className="p-0.5 text-gray-500 hover:text-purple-600 disabled:opacity-20 disabled:hover:text-gray-500 rounded hover:bg-gray-100 transition-colors"
+                disabled={isLast || isReordering}
+                onClick={(e) => handleMove(rowId, "down", e)}
+                title={isLast ? "Already at bottom" : "Move Down in sequence"}
+                className={`p-0.5 rounded transition-colors ${
+                  isLast || isReordering
+                    ? "opacity-20 cursor-not-allowed text-gray-400"
+                    : "text-gray-600 hover:text-purple-600 hover:bg-gray-100 cursor-pointer"
+                }`}
               >
                 <ChevronDown className="h-4 w-4" />
               </button>
