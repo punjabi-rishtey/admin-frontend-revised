@@ -420,6 +420,31 @@ const adminApi = {
     return { reviews: res.data };
   },
 
+  createReview: async (reviewData) => {
+    const res = await axios.post(`${REVIEWS_BASE}/add`, reviewData, {
+      headers: getAuthHeader(),
+    });
+    return res.data;
+  },
+
+  updateReview: async (id, reviewData) => {
+    const res = await axios.put(`${REVIEWS_BASE}/edit/${id}`, reviewData, {
+      headers: getAuthHeader(),
+    });
+    return res.data;
+  },
+
+  reorderReviews: async (orderedIds) => {
+    const res = await axios.put(
+      `${REVIEWS_BASE}/reorder`,
+      { orderedIds },
+      {
+        headers: getAuthHeader(),
+      }
+    );
+    return res.data;
+  },
+
   deleteReview: async (id) => {
     return await axios.delete(`${REVIEWS_BASE}/${id}`, {
       headers: getAuthHeader(),
