@@ -51,6 +51,10 @@ const Reviews = () => {
     fetchReviews();
   }, [fetchReviews]);
 
+  const maxPosition = editingReview
+    ? Math.max(1, reviews.length)
+    : reviews.length + 1;
+
   const handleOpenAddModal = () => {
     setEditingReview(null);
     setFormData({
@@ -63,12 +67,22 @@ const Reviews = () => {
 
   const handleOpenEditModal = (review, e) => {
     e.stopPropagation();
+    const currentIdx = reviews.findIndex(
+      (r) => String(r._id || r.id) === String(review._id || review.id)
+    );
+    const existingOrder =
+      typeof review.order === "number" && review.order > 0
+        ? review.order
+        : currentIdx !== -1
+        ? currentIdx + 1
+        : 1;
+
     setEditingReview(review);
     setFormData({
       user_name: review.user_name || "",
       message: review.message || "",
       ratings: review.ratings || 5,
-      order: review.order ?? "",
+      order: existingOrder,
     });
     setFormError("");
     setShowModal(true);
@@ -97,6 +111,14 @@ const Reviews = () => {
       return;
     }
 
+    const maxPos = editingReview
+      ? Math.max(1, reviews.length)
+      : reviews.length + 1;
+    let chosenOrder =
+      formData.order !== "" ? Number(formData.order) : maxPos;
+    if (isNaN(chosenOrder) || chosenOrder < 1) chosenOrder = 1;
+    if (chosenOrder > maxPos) chosenOrder = maxPos;
+
     try {
       setIsSaving(true);
       setFormError("");
@@ -105,7 +127,7 @@ const Reviews = () => {
         user_name: userName,
         message,
         ratings,
-        ...(formData.order !== "" ? { order: Number(formData.order) } : {}),
+        order: chosenOrder,
       };
 
       if (editingReview) {
@@ -459,18 +481,25 @@ const Reviews = () => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Position (Sequence)
+                Position (Sequence){" "}
+                <span className="text-xs font-normal text-gray-500">
+                  (1 to {maxPosition})
+                </span>
               </label>
               <input
                 type="number"
                 min="1"
+                max={maxPosition}
                 value={formData.order}
                 onChange={(e) =>
                   setFormData({ ...formData, order: e.target.value })
                 }
-                placeholder="e.g. 1"
+                placeholder={`1 to ${maxPosition}`}
                 className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
               />
+              <p className="text-xs text-gray-400 mt-1">
+                Total reviews: {reviews.length}. Max position is {maxPosition}.
+              </p>
             </div>
           </div>
 
