@@ -608,8 +608,7 @@ export default adminApi;
 
 // const token = localStorage.getItem("token");
 // const headers = {
-//   // Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3YWY5NTNlZjExNWNlYTQxODg1ZjFlNSIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc1MjE1MDM3NCwiZXhwIjoxNzUyNzU1MTc0fQ.XxLD-AncG-f_HdzOWTZshjYp5Zu6IPyaO5mhzJyH-O8`, // You can switch this to hardcoded token for testing if needed
-//   Authorization: `Bearer ${token}`, // You can switch this to hardcoded token for testing if needed
+//   Authorization: `Bearer ${token}`,
 // };
 
 // const adminApi = {
