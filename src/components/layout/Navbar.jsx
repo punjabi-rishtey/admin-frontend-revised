@@ -1,6 +1,7 @@
 // components/layout/Navbar.jsx
 import { useEffect, useState } from "react";
 import { LogOut, User } from "lucide-react";
+import { clearAdminSession } from "../../utils/adminAuth";
 
 const getSavedEmail = () => {
   const direct = localStorage.getItem("adminEmail");
@@ -29,8 +30,7 @@ const Navbar = ({ setIsAuthenticated }) => {
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("adminEmail");
+    clearAdminSession();
     setIsAuthenticated(false);
   };
 
