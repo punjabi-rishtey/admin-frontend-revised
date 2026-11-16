@@ -1,4 +1,18 @@
 import axios from "axios";
+import { handleAdminUnauthorized } from "../utils/adminAuth.js";
+
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      const url = String(error.config?.url || "");
+      if (!url.includes("/admin/auth/login")) {
+        handleAdminUnauthorized();
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 const DEFAULT_BASE_URL = import.meta.env.DEV
   ? "http://127.0.0.1:8080/api"

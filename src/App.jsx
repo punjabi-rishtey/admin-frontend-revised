@@ -22,6 +22,7 @@ import QRCode from "./components/pages/QRCode";
 import AddUser from "./components/pages/AddUser";
 import EditUserPage from "./components/pages/EditUser";
 import Requests from "./components/pages/Requests";
+import { isAdminAuthenticated } from "./utils/adminAuth";
 // import Utility from './components/pages/Utility';
 
 function App() {
@@ -29,8 +30,7 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    setIsAuthenticated(!!token);
+    setIsAuthenticated(isAdminAuthenticated());
     setLoading(false);
   }, []);
 
