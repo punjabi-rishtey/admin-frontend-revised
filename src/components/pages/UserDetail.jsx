@@ -27,6 +27,15 @@ import LoadingSpinner from "../common/LoadingSpinner";
 import ConfirmDialog from "../common/ConfirmDialog";
 import ApproveModal from "../common/ApproveModal";
 import adminApi from "../../services/api";
+import selectOptions from "../../utils/selectOptions";
+
+const mangalikDisplayValue = (value) => {
+  if (!value) return "Not specified";
+  return (
+    selectOptions.mangalik.find((option) => option.value === value)?.label ||
+    value
+  );
+};
 
 const UserDetail = () => {
   const { id } = useParams();
@@ -538,7 +547,10 @@ const UserDetail = () => {
           <InfoItem label="Religion" value={user.religion} />
           <InfoItem label="Caste" value={user.caste || "Not specified"} />
           <InfoItem label="Marital Status" value={user.marital_status} />
-          <InfoItem label="Mangalik" value={user.mangalik || "Not specified"} />
+          <InfoItem
+            label="Mangalik"
+            value={mangalikDisplayValue(user.mangalik)}
+          />
           <InfoItem label="Language" value={user.language || "Not specified"} />
           <InfoItem
             label="Visibility"
