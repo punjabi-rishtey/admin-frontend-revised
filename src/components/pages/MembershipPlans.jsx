@@ -22,6 +22,7 @@ const MembershipPlans = () => {
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
+    description: "",
     price: "",
     duration: "",
     premiumProfilesView: "Unlimited",
@@ -52,6 +53,9 @@ const MembershipPlans = () => {
     const price = Number(formData.price);
 
     if (!name) return "Plan name is required.";
+    if (formData.description.length > 200) {
+      return "Description must be 200 characters or fewer.";
+    }
     if (!Number.isFinite(price) || price < 0) {
       return "Price must be 0 or more.";
     }
@@ -77,6 +81,7 @@ const MembershipPlans = () => {
 
     const payload = {
       name: formData.name.trim(),
+      description: formData.description.trim(),
       price: Number(formData.price),
       duration: formData.isLifetime
         ? LIFETIME_SCHEMA_DURATION_MONTHS
@@ -141,6 +146,7 @@ const MembershipPlans = () => {
     setFormError("");
     setFormData({
       name: "",
+      description: "",
       price: "",
       duration: "",
       premiumProfilesView: "Unlimited",
@@ -152,6 +158,7 @@ const MembershipPlans = () => {
     setSelectedPlan(plan);
     setFormData({
       name: plan.name,
+      description: plan.description ?? "",
       price: plan.price,
       duration: plan.isLifetime ? "" : plan.duration,
       premiumProfilesView: plan.premiumProfilesView || "Unlimited",
@@ -345,6 +352,25 @@ const MembershipPlans = () => {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               placeholder={formData.isLifetime ? "e.g., Lifetime" : "e.g., Gold"}
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Description
+            </label>
+            <textarea
+              rows={3}
+              maxLength={200}
+              value={formData.description}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              placeholder="Short text shown under the plan name on the member site (optional)"
+            />
+            <p className="mt-1 text-xs text-gray-500 text-right">
+              {formData.description.length}/200
+            </p>
           </div>
 
           <div>
