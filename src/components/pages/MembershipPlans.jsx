@@ -6,13 +6,10 @@ import ModalForm from "../common/ModalForm";
 import ConfirmDialog from "../common/ConfirmDialog";
 import LoadingSpinner from "../common/LoadingSpinner";
 import adminApi from "../../services/api";
-
-const formatMembershipLength = (months) => {
-  if (months === 12) return "1 year";
-  if (months === 18) return "1.5 years";
-  if (!months) return "";
-  return `${months} month${months === 1 ? "" : "s"}`;
-};
+import {
+  formatMembershipLength,
+  LIFETIME_SCHEMA_DURATION_MONTHS,
+} from "../../utils/membership";
 
 const MembershipPlans = () => {
   const [plans, setPlans] = useState([]);
@@ -28,6 +25,7 @@ const MembershipPlans = () => {
     price: "",
     duration: "",
     premiumProfilesView: "Unlimited",
+    isLifetime: false,
   });
 
   const fetchPlans = useCallback(async () => {
@@ -52,12 +50,17 @@ const MembershipPlans = () => {
   const validatePlanForm = () => {
     const name = formData.name.trim();
     const price = Number(formData.price);
-    const duration = Number(formData.duration);
 
     if (!name) return "Plan name is required.";
     if (!Number.isFinite(price) || price < 0) {
       return "Price must be 0 or more.";
     }
+
+    if (formData.isLifetime) {
+      return "";
+    }
+
+    const duration = Number(formData.duration);
     if (!Number.isInteger(duration) || duration <= 0) {
       return "Duration must be a whole number of months.";
     }
@@ -75,7 +78,10 @@ const MembershipPlans = () => {
     const payload = {
       name: formData.name.trim(),
       price: Number(formData.price),
-      duration: Number(formData.duration),
+      duration: formData.isLifetime
+        ? LIFETIME_SCHEMA_DURATION_MONTHS
+        : Number(formData.duration),
+      isLifetime: Boolean(formData.isLifetime),
       premiumProfilesView:
         String(formData.premiumProfilesView || "").trim() || "Unlimited",
     };
@@ -138,6 +144,7 @@ const MembershipPlans = () => {
       price: "",
       duration: "",
       premiumProfilesView: "Unlimited",
+      isLifetime: false,
     });
   };
 
@@ -146,10 +153,19 @@ const MembershipPlans = () => {
     setFormData({
       name: plan.name,
       price: plan.price,
-      duration: plan.duration,
+      duration: plan.isLifetime ? "" : plan.duration,
       premiumProfilesView: plan.premiumProfilesView || "Unlimited",
+      isLifetime: Boolean(plan.isLifetime),
     });
     setShowModal(true);
+  };
+
+  const setLifetimePlanKind = (isLifetime) => {
+    setFormData({
+      ...formData,
+      isLifetime,
+      duration: isLifetime ? "" : formData.duration || "",
+    });
   };
 
   const columns = [
@@ -174,7 +190,10 @@ const MembershipPlans = () => {
       key: "duration",
       label: "Duration",
       sortable: true,
-      render: (value) => formatMembershipLength(Number(value)) || `${value} months`,
+      render: (value, plan) =>
+        plan.isLifetime
+          ? "Lifetime (no renewal)"
+          : formatMembershipLength(Number(value)) || `${value} months`,
     },
     {
       key: "premiumProfilesView",
@@ -242,9 +261,12 @@ const MembershipPlans = () => {
               ₹{Number(plan.price).toLocaleString("en-IN")}
             </div>
             <div className="text-sm text-gray-600 mb-4">
-              {formatMembershipLength(Number(plan.duration)) ||
-                `${plan.duration} months`}{" "}
-              validity
+              {plan.isLifetime
+                ? "Lifetime — no renewal"
+                : `${
+                    formatMembershipLength(Number(plan.duration)) ||
+                    `${plan.duration} months`
+                  } validity`}
             </div>
             <div className="text-sm text-gray-600">
               {/* <strong>Profile Views:</strong> {plan.premiumProfilesView} */}
@@ -280,6 +302,36 @@ const MembershipPlans = () => {
       >
         <div className="space-y-4">
           <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Plan type
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setLifetimePlanKind(false)}
+                className={`px-3 py-2 text-sm rounded-lg border font-medium transition-colors ${
+                  !formData.isLifetime
+                    ? "bg-purple-50 border-purple-600 text-purple-900 ring-1 ring-purple-600"
+                    : "bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                Term (Gold / Hallmark)
+              </button>
+              <button
+                type="button"
+                onClick={() => setLifetimePlanKind(true)}
+                className={`px-3 py-2 text-sm rounded-lg border font-medium transition-colors ${
+                  formData.isLifetime
+                    ? "bg-purple-50 border-purple-600 text-purple-900 ring-1 ring-purple-600"
+                    : "bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                Lifetime (one-time)
+              </button>
+            </div>
+          </div>
+
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Plan Name
             </label>
@@ -291,7 +343,7 @@ const MembershipPlans = () => {
                 setFormData({ ...formData, name: e.target.value })
               }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              placeholder="e.g., Premium Plan"
+              placeholder={formData.isLifetime ? "e.g., Lifetime" : "e.g., Gold"}
             />
           </div>
 
@@ -312,23 +364,32 @@ const MembershipPlans = () => {
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Duration (months)
-            </label>
-            <input
-              type="number"
-              required
-              min="1"
-              value={formData.duration}
-              onChange={(e) =>
-                setFormData({ ...formData, duration: e.target.value })
-              }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              step="1"
-              placeholder="e.g., 6"
-            />
-          </div>
+          {!formData.isLifetime && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Duration (months)
+              </label>
+              <input
+                type="number"
+                required
+                min="1"
+                value={formData.duration}
+                onChange={(e) =>
+                  setFormData({ ...formData, duration: e.target.value })
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                step="1"
+                placeholder="e.g., 12 for Gold, 18 for Hallmark"
+              />
+            </div>
+          )}
+
+          {formData.isLifetime && (
+            <p className="text-sm text-gray-600 rounded-lg border border-purple-100 bg-purple-50 px-3 py-2">
+              One-time access: saves <code className="text-xs">isLifetime</code>{" "}
+              with your chosen name and price. No renewal date is stored.
+            </p>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
