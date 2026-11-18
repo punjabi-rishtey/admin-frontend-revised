@@ -5,28 +5,14 @@ import DataTable from "../common/DataTable";
 import ConfirmDialog from "../common/ConfirmDialog";
 import LoadingSpinner from "../common/LoadingSpinner";
 import adminApi from "../../services/api";
-
-const formatMembershipLength = (months) => {
-  if (months === 12) return "1 year";
-  if (months === 18) return "1.5 years";
-  if (!months) return "";
-  return `${months} month${months === 1 ? "" : "s"}`;
-};
-
-const paymentPlanName = (payment, months) => {
-  if (payment?.planName) return payment.planName;
-  if (months === 18) return "Hallmark";
-  if (months === 12) return "Gold";
-  return "";
-};
-
-const paymentAmount = (payment, months) => {
-  const storedPrice = Number(payment?.planPrice);
-  if (Number.isFinite(storedPrice) && storedPrice > 0) return storedPrice;
-  if (months === 18) return 3000;
-  if (months === 12) return 2000;
-  return null;
-};
+import {
+  formatMembershipExpiry,
+  formatMembershipLength,
+  getPaymentDurationMonths,
+  isLifetimeMembershipRecord,
+  paymentAmount,
+  paymentPlanName,
+} from "../../utils/membership";
 
 const formatInr = (amount) => `₹${Number(amount).toLocaleString("en-IN")}`;
 
@@ -79,44 +65,10 @@ const PaymentRequests = () => {
     fetchPayments();
   }, [fetchPayments]);
 
-  const getPaymentDurationMonths = (payment) => {
-    const storedDuration = Number(payment?.membershipDurationMonths);
-
-    if (Number.isInteger(storedDuration) && storedDuration > 0) {
-      return storedDuration;
-    }
-
-    const start = new Date(payment?.createdAt);
-    const end = new Date(payment?.expiresAt);
-
-    if (
-      Number.isNaN(start.getTime()) ||
-      Number.isNaN(end.getTime()) ||
-      end <= start
-    ) {
-      return null;
-    }
-
-    let months =
-      (end.getFullYear() - start.getFullYear()) * 12 +
-      (end.getMonth() - start.getMonth());
-
-    if (months < 1) {
-      return 1;
-    }
-
-    const adjustedEnd = new Date(start);
-    adjustedEnd.setMonth(adjustedEnd.getMonth() + months);
-
-    if (adjustedEnd < end) {
-      months += 1;
-    }
-
-    return months;
+  const formatDurationMonths = (payment, months) => {
+    if (isLifetimeMembershipRecord(payment)) return "lifetime (no renewal)";
+    return formatMembershipLength(months) || "the saved duration";
   };
-
-  const formatDurationMonths = (months) =>
-    formatMembershipLength(months) || "the saved duration";
 
   const handleApprove = async () => {
     try {
@@ -186,10 +138,13 @@ const PaymentRequests = () => {
       key: "planName",
       label: "Plan",
       render: (_value, payment) => {
+        const paymentIsLifetime = isLifetimeMembershipRecord(payment);
         const months = getPaymentDurationMonths(payment);
         const name = paymentPlanName(payment, months);
         const amount = paymentAmount(payment, months);
-        const length = formatMembershipLength(months);
+        const length = paymentIsLifetime
+          ? "No renewal"
+          : formatMembershipLength(months);
         const detail = [amount ? formatInr(amount) : null, length]
           .filter(Boolean)
           .join(" · ");
@@ -231,8 +186,10 @@ const PaymentRequests = () => {
     {
       key: "expiresAt",
       label: "Expires",
-      render: (value) =>
-        value ? new Date(value).toLocaleDateString() : "Not set",
+      render: (value, payment) =>
+        formatMembershipExpiry(value, {
+          isLifetime: isLifetimeMembershipRecord(payment),
+        }),
     },
     {
       key: "paymentStatus",
@@ -376,6 +333,7 @@ const PaymentRequests = () => {
             getPaymentDurationMonths(selectedPayment)
           ) || "membership"
         } payment for ${selectedPayment?.fullName}? This activates their profile for ${formatDurationMonths(
+          selectedPayment,
           getPaymentDurationMonths(selectedPayment)
         )}${
           paymentAmount(
@@ -414,38 +372,11 @@ const PaymentRequests = () => {
 const PaymentDetailModal = ({ payment, onClose }) => {
   const [screenshotFailed, setScreenshotFailed] = useState(false);
   const hasScreenshot = Boolean(payment.screenshotUrl);
-  const storedDuration = Number(payment.membershipDurationMonths);
-  let durationMonths = Number.isInteger(storedDuration) && storedDuration > 0
-    ? storedDuration
-    : null;
-
-  if (!durationMonths) {
-    const start = new Date(payment?.createdAt);
-    const end = new Date(payment?.expiresAt);
-
-    if (
-      !Number.isNaN(start.getTime()) &&
-      !Number.isNaN(end.getTime()) &&
-      end > start
-    ) {
-      durationMonths =
-        (end.getFullYear() - start.getFullYear()) * 12 +
-        (end.getMonth() - start.getMonth());
-
-      if (durationMonths < 1) {
-        durationMonths = 1;
-      }
-
-      const adjustedEnd = new Date(start);
-      adjustedEnd.setMonth(adjustedEnd.getMonth() + durationMonths);
-
-      if (adjustedEnd < end) {
-        durationMonths += 1;
-      }
-    }
-  }
-
-  const hasDuration = Number.isInteger(durationMonths) && durationMonths > 0;
+  const paymentIsLifetime = isLifetimeMembershipRecord(payment);
+  const durationMonths = getPaymentDurationMonths(payment);
+  const hasDuration =
+    paymentIsLifetime ||
+    (Number.isInteger(durationMonths) && durationMonths > 0);
   const planName = paymentPlanName(payment, durationMonths);
   const amount = paymentAmount(payment, durationMonths);
 
@@ -512,9 +443,21 @@ const PaymentDetailModal = ({ payment, onClose }) => {
                   Duration
                 </label>
                 <p className="text-gray-900">
-                  {hasDuration
-                    ? formatMembershipLength(durationMonths)
-                    : "Not saved"}
+                  {paymentIsLifetime
+                    ? "Lifetime (no renewal)"
+                    : hasDuration
+                      ? formatMembershipLength(durationMonths)
+                      : "Not saved"}
+                </p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">
+                  Renewal
+                </label>
+                <p className="text-gray-900">
+                  {formatMembershipExpiry(payment.expiresAt, {
+                    isLifetime: paymentIsLifetime,
+                  })}
                 </p>
               </div>
             </div>

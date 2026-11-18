@@ -1,5 +1,9 @@
 import axios from "axios";
 import { handleAdminUnauthorized } from "../utils/adminAuth.js";
+import {
+  getPaymentDurationMonths,
+  isLifetimeMembershipRecord,
+} from "../utils/membership.js";
 
 axios.interceptors.response.use(
   (response) => response,
@@ -29,42 +33,6 @@ const REVIEWS_BASE = `${BASE_URL}/review`;
 const getAuthHeader = () => {
   const token = localStorage.getItem("token");
   return { Authorization: `Bearer ${token}` };
-};
-
-const derivePaymentDurationMonths = (payment) => {
-  const storedDuration = Number(payment?.membershipDurationMonths);
-
-  if (Number.isInteger(storedDuration) && storedDuration > 0) {
-    return storedDuration;
-  }
-
-  const start = new Date(payment?.createdAt);
-  const end = new Date(payment?.expiresAt);
-
-  if (
-    Number.isNaN(start.getTime()) ||
-    Number.isNaN(end.getTime()) ||
-    end <= start
-  ) {
-    return null;
-  }
-
-  let months =
-    (end.getFullYear() - start.getFullYear()) * 12 +
-    (end.getMonth() - start.getMonth());
-
-  if (months < 1) {
-    return 1;
-  }
-
-  const adjustedEnd = new Date(start);
-  adjustedEnd.setMonth(adjustedEnd.getMonth() + months);
-
-  if (adjustedEnd < end) {
-    months += 1;
-  }
-
-  return months;
 };
 
 const adminApi = {
@@ -345,11 +313,17 @@ const adminApi = {
       throw new Error("This payment request is missing its ID.");
     }
 
+    const payload = {};
+    if (!isLifetimeMembershipRecord(payment)) {
+      const membershipDurationMonths = getPaymentDurationMonths(payment);
+      if (Number.isInteger(membershipDurationMonths) && membershipDurationMonths > 0) {
+        payload.membershipDurationMonths = membershipDurationMonths;
+      }
+    }
+
     return await axios.put(
       `${API_BASE_URL}/subscriptions/${subscriptionId}/approve`,
-      {
-        membershipDurationMonths: derivePaymentDurationMonths(payment),
-      },
+      payload,
       { headers: getAuthHeader() }
     );
   },

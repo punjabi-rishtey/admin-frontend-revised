@@ -7,7 +7,9 @@
  */
 export const formatDate = (date) => {
   if (!date) return '-';
-  return new Date(date).toLocaleDateString('en-IN', {
+  const parsed = new Date(date);
+  if (Number.isNaN(parsed.getTime()) || parsed.getFullYear() < 1971) return '-';
+  return parsed.toLocaleDateString('en-IN', {
     year: 'numeric',
     month: 'short',
     day: 'numeric'
@@ -21,7 +23,9 @@ export const formatDate = (date) => {
  */
 export const formatDateTime = (date) => {
   if (!date) return '-';
-  return new Date(date).toLocaleString('en-IN', {
+  const parsed = new Date(date);
+  if (Number.isNaN(parsed.getTime()) || parsed.getFullYear() < 1971) return '-';
+  return parsed.toLocaleString('en-IN', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
@@ -154,7 +158,9 @@ export const getInitials = (name) => {
  */
 export const isExpired = (date) => {
   if (!date) return false;
-  return new Date(date) < new Date();
+  const parsed = new Date(date);
+  if (Number.isNaN(parsed.getTime()) || parsed.getFullYear() < 1971) return false;
+  return parsed < new Date();
 };
 
 /**
@@ -163,12 +169,15 @@ export const isExpired = (date) => {
  * @returns {number} Days until expiry (negative if expired)
  */
 export const getDaysUntilExpiry = (date) => {
-  if (!date) return 0;
+  if (!date) return null;
   const expiryDate = new Date(date);
+  if (Number.isNaN(expiryDate.getTime()) || expiryDate.getFullYear() < 1971) {
+    return null;
+  }
   const today = new Date();
   const diffTime = expiryDate - today;
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  return diffDays;
+  return Number.isFinite(diffDays) ? diffDays : null;
 };
 
 /**

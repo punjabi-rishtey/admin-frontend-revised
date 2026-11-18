@@ -28,6 +28,11 @@ import ConfirmDialog from "../common/ConfirmDialog";
 import ApproveModal from "../common/ApproveModal";
 import adminApi from "../../services/api";
 import selectOptions from "../../utils/selectOptions";
+import {
+  formatMembershipExpiry,
+  isLifetimeMembershipRecord,
+  userHasLifetimeMembership,
+} from "../../utils/membership";
 
 const mangalikDisplayValue = (value) => {
   if (!value) return "Not specified";
@@ -54,6 +59,7 @@ const UserDetail = () => {
   const getPlanInfo = (targetUser) => {
     if (!targetUser || targetUser.status !== "Approved") return null;
     const sub = targetUser.subscription;
+    if (isLifetimeMembershipRecord(sub)) return "Lifetime";
     const planName = String(sub?.planName || "").trim();
     if (planName) return planName;
     const months = Number(sub?.membershipDurationMonths);
@@ -301,9 +307,24 @@ const UserDetail = () => {
   if (loading) return <LoadingSpinner />;
   if (!user) return <div>User not found</div>;
 
-  const showExpiryDate =
-    ["Approved", "Expired", "Canceled"].includes(user.status) &&
-    user.metadata?.exp_date;
+  const lifetimeMember = userHasLifetimeMembership(user);
+  let membershipExpiryPrefix = null;
+  let membershipExpiryLabel = null;
+  if (["Approved", "Expired", "Canceled"].includes(user.status)) {
+    if (lifetimeMember) {
+      membershipExpiryPrefix = "Renewal: ";
+      membershipExpiryLabel = "No renewal";
+    } else if (
+      user.metadata?.exp_date != null &&
+      user.metadata?.exp_date !== ""
+    ) {
+      const formatted = formatMembershipExpiry(user.metadata.exp_date);
+      if (formatted !== "No renewal") {
+        membershipExpiryPrefix = "Expires: ";
+        membershipExpiryLabel = formatted;
+      }
+    }
+  }
 
   // const profileCompletion = user.profileCompletion || 75; // Mock value for now
 
@@ -392,10 +413,10 @@ const UserDetail = () => {
                   Registered:{" "}
                   {new Date(user.metadata?.register_date).toLocaleDateString()}
                 </span>
-                {showExpiryDate && (
+                {membershipExpiryLabel && (
                   <span className="text-sm text-gray-500">
-                    Expires:{" "}
-                    {new Date(user.metadata.exp_date).toLocaleDateString()}
+                    {membershipExpiryPrefix}
+                    {membershipExpiryLabel}
                   </span>
                 )}
               </div>
