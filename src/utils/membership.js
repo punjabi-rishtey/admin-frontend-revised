@@ -57,17 +57,16 @@ export const userHasLifetimeMembership = (user) => {
 };
 
 export const paymentPlanName = (payment, months) => {
-  if (isLifetimeMembershipRecord(payment)) return LIFETIME_PLAN_NAME;
-  if (payment?.planName) return payment.planName;
+  const storedName = String(payment?.planName || "").trim();
+  if (storedName) return storedName;
   if (months === 18) return "Hallmark";
   if (months === 12) return "Gold";
   return "";
 };
 
 export const paymentAmount = (payment, months) => {
-  if (isLifetimeMembershipRecord(payment)) return LIFETIME_PLAN_PRICE;
   const storedPrice = Number(payment?.planPrice);
-  if (Number.isFinite(storedPrice) && storedPrice > 0) return storedPrice;
+  if (Number.isFinite(storedPrice) && storedPrice >= 0) return storedPrice;
   if (months === 18) return 3000;
   if (months === 12) return 2000;
   return null;

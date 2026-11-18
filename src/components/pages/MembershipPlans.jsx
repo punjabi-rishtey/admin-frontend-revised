@@ -8,8 +8,6 @@ import LoadingSpinner from "../common/LoadingSpinner";
 import adminApi from "../../services/api";
 import {
   formatMembershipLength,
-  LIFETIME_PLAN_NAME,
-  LIFETIME_PLAN_PRICE,
   LIFETIME_SCHEMA_DURATION_MONTHS,
 } from "../../utils/membership";
 
@@ -54,20 +52,15 @@ const MembershipPlans = () => {
     const price = Number(formData.price);
 
     if (!name) return "Plan name is required.";
+    if (!Number.isFinite(price) || price < 0) {
+      return "Price must be 0 or more.";
+    }
+
     if (formData.isLifetime) {
-      if (name.toLowerCase() !== LIFETIME_PLAN_NAME.toLowerCase()) {
-        return `Lifetime plans must be named "${LIFETIME_PLAN_NAME}".`;
-      }
-      if (price !== LIFETIME_PLAN_PRICE) {
-        return `Lifetime plan price must be ₹${LIFETIME_PLAN_PRICE.toLocaleString("en-IN")}.`;
-      }
       return "";
     }
 
     const duration = Number(formData.duration);
-    if (!Number.isFinite(price) || price < 0) {
-      return "Price must be 0 or more.";
-    }
     if (!Number.isInteger(duration) || duration <= 0) {
       return "Duration must be a whole number of months.";
     }
@@ -168,21 +161,11 @@ const MembershipPlans = () => {
   };
 
   const setLifetimePlanKind = (isLifetime) => {
-    if (isLifetime) {
-      setFormData({
-        ...formData,
-        isLifetime: true,
-        name: LIFETIME_PLAN_NAME,
-        price: String(LIFETIME_PLAN_PRICE),
-        duration: "",
-      });
-    } else {
-      setFormData({
-        ...formData,
-        isLifetime: false,
-        duration: formData.duration || "",
-      });
-    }
+    setFormData({
+      ...formData,
+      isLifetime,
+      duration: isLifetime ? "" : formData.duration || "",
+    });
   };
 
   const columns = [
@@ -343,7 +326,7 @@ const MembershipPlans = () => {
                     : "bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100"
                 }`}
               >
-                Lifetime (₹5,000)
+                Lifetime (one-time)
               </button>
             </div>
           </div>
@@ -360,10 +343,7 @@ const MembershipPlans = () => {
                 setFormData({ ...formData, name: e.target.value })
               }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              placeholder={
-                formData.isLifetime ? LIFETIME_PLAN_NAME : "e.g., Gold"
-              }
-              readOnly={formData.isLifetime}
+              placeholder={formData.isLifetime ? "e.g., Lifetime" : "e.g., Gold"}
             />
           </div>
 
@@ -376,7 +356,6 @@ const MembershipPlans = () => {
               required
               min="0"
               value={formData.price}
-              readOnly={formData.isLifetime}
               onChange={(e) =>
                 setFormData({ ...formData, price: e.target.value })
               }
@@ -407,9 +386,8 @@ const MembershipPlans = () => {
 
           {formData.isLifetime && (
             <p className="text-sm text-gray-600 rounded-lg border border-purple-100 bg-purple-50 px-3 py-2">
-              Lifetime plans are one-time (₹5,000). Access uses{" "}
-              <code className="text-xs">isLifetime</code> — no renewal date is
-              stored.
+              One-time access: saves <code className="text-xs">isLifetime</code>{" "}
+              with your chosen name and price. No renewal date is stored.
             </p>
           )}
 

@@ -30,7 +30,6 @@ import adminApi from "../../services/api";
 import selectOptions from "../../utils/selectOptions";
 import {
   formatMembershipExpiry,
-  isLifetimeMembershipRecord,
   userHasLifetimeMembership,
 } from "../../utils/membership";
 
@@ -59,7 +58,6 @@ const UserDetail = () => {
   const getPlanInfo = (targetUser) => {
     if (!targetUser || targetUser.status !== "Approved") return null;
     const sub = targetUser.subscription;
-    if (isLifetimeMembershipRecord(sub)) return "Lifetime";
     const planName = String(sub?.planName || "").trim();
     if (planName) return planName;
     const months = Number(sub?.membershipDurationMonths);
