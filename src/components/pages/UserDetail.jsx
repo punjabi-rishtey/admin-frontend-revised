@@ -32,6 +32,7 @@ import {
   formatMembershipExpiry,
   userHasLifetimeMembership,
 } from "../../utils/membership";
+import { partnerPreferenceLabel } from "../../utils/partnerPreferenceOptions";
 
 const mangalikDisplayValue = (value) => {
   if (!value) return "Not specified";
@@ -53,6 +54,7 @@ const UserDetail = () => {
   const [statusConfirm, setStatusConfirm] = useState(null);
   const [notice, setNotice] = useState(null);
   const [updatingPrivacy, setUpdatingPrivacy] = useState(false);
+  const [partnerPreferenceOptions, setPartnerPreferenceOptions] = useState([]);
   const isPrivateProfile = user?.profile_visibility === "private";
 
   const getPlanInfo = (targetUser) => {
@@ -85,6 +87,21 @@ const UserDetail = () => {
   useEffect(() => {
     fetchUserDetails();
   }, [fetchUserDetails]);
+
+  useEffect(() => {
+    let active = true;
+    adminApi
+      .fetchPartnerPreferenceOptions()
+      .then((options) => {
+        if (active) setPartnerPreferenceOptions(options);
+      })
+      .catch((err) => {
+        console.error("Failed to load partner preference options:", err);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -548,6 +565,37 @@ const UserDetail = () => {
           </div>
         </div>
       )}
+
+      {/* Partner preferences */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+          <Heart className="h-5 w-5 mr-2 text-gray-600" />
+          Partner Preferences
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <InfoItem
+            label="Preference 1"
+            value={partnerPreferenceLabel(
+              partnerPreferenceOptions,
+              user.preferences?.preference1
+            )}
+          />
+          <InfoItem
+            label="Preference 2"
+            value={partnerPreferenceLabel(
+              partnerPreferenceOptions,
+              user.preferences?.preference2
+            )}
+          />
+          <InfoItem
+            label="Preference 3"
+            value={partnerPreferenceLabel(
+              partnerPreferenceOptions,
+              user.preferences?.preference3
+            )}
+          />
+        </div>
+      </div>
 
       {/* Basic Information */}
       <div className="bg-white rounded-lg shadow p-6">
