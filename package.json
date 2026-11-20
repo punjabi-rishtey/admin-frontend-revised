@@ -4,9 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "node init && vite",
-    "dev:qa": "node init && vite --mode qa --host 127.0.0.1 --port 5174",
-    "build": "node init && vite build",
+    "dev": "vite",
+    "dev:qa": "vite --mode qa --host 127.0.0.1 --port 5174",
+    "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
