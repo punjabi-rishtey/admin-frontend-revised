@@ -59,6 +59,22 @@ const adminApi = {
     return res.data;
   },
 
+  fetchPartnerPreferenceOptions: async () => {
+    const res = await axios.get(`${BASE_URL}/options/preferences`);
+    return res.data?.options || [];
+  },
+
+  updateUserPreferences: async (userId, preferences) => {
+    const res = await axios.put(
+      `${API_BASE_URL}/users/${userId}/preferences`,
+      preferences,
+      {
+        headers: { ...getAuthHeader(), "Content-Type": "application/json" },
+      }
+    );
+    return res.data;
+  },
+
   updateUserDetails: async (userId, data, section) => {
     try {
       let endpoint;
@@ -77,6 +93,9 @@ const adminApi = {
           break;
         case "profession":
           endpoint = `${API_BASE_URL}/professions/${userId}`;
+          break;
+        case "preferences":
+          endpoint = `${API_BASE_URL}/users/${userId}/preferences`;
           break;
         default:
           throw new Error("Invalid section");

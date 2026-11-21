@@ -1,5 +1,5 @@
 // components/pages/AddUser.jsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -16,12 +16,35 @@ import {
 } from "lucide-react";
 import adminApi from "../../services/api";
 import selectOptions from "../../utils/selectOptions";
+import {
+  isAllowedPartnerPreference,
+  preferenceSelectOptions,
+} from "../../utils/partnerPreferenceOptions";
 
 const AddUser = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [partnerPreferenceOptions, setPartnerPreferenceOptions] = useState([]);
+
+  useEffect(() => {
+    let active = true;
+    adminApi
+      .fetchPartnerPreferenceOptions()
+      .then((options) => {
+        if (active) setPartnerPreferenceOptions(options);
+      })
+      .catch((err) => {
+        console.error("Failed to load partner preference options:", err);
+        setError(
+          "Could not load partner preference options. Please refresh and try again."
+        );
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -123,6 +146,15 @@ const AddUser = () => {
           `${
             field.charAt(0).toUpperCase() + field.slice(1).replace("_", " ")
           } is required`
+        );
+        return false;
+      }
+    }
+
+    for (const field of ["preference1", "preference2", "preference3"]) {
+      if (!isAllowedPartnerPreference(partnerPreferenceOptions, formData[field])) {
+        setError(
+          `${field.replace("_", " ")} must be selected from the partner preference list.`
         );
         return false;
       }
@@ -236,9 +268,9 @@ const AddUser = () => {
       submitData.append("userData", JSON.stringify(userData));
 
       const preferences = {
-        preference1: formData.preference1,
-        preference2: formData.preference2,
-        preference3: formData.preference3,
+        preference1: formData.preference1.trim(),
+        preference2: formData.preference2.trim(),
+        preference3: formData.preference3.trim(),
       };
       submitData.append("preferences", JSON.stringify(preferences));
 
@@ -786,50 +818,29 @@ const AddUser = () => {
           </h2>
 
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Preference 1 <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="preference1"
-                value={formData.preference1}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                placeholder="e.g., Age range, height preference"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Preference 2 <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="preference2"
-                value={formData.preference2}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                placeholder="e.g., Education level, profession"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Preference 3 <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="preference3"
-                value={formData.preference3}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                placeholder="e.g., Family values, lifestyle"
-                required
-              />
-            </div>
+            {["preference1", "preference2", "preference3"].map((field, index) => (
+              <div key={field}>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Preference {index + 1} <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name={field}
+                  value={formData[field]}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  required
+                >
+                  {preferenceSelectOptions(
+                    partnerPreferenceOptions,
+                    formData[field]
+                  ).map((option) => (
+                    <option key={`${field}-${option.value}`} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ))}
           </div>
         </div>
 

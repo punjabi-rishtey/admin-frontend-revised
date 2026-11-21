@@ -121,6 +121,11 @@ const normalizeUserData = (data) => {
       occupation: data.profession?.occupation || "",
       work_address: data.profession?.work_address || { address: "", city: "" },
     },
+    preferences: {
+      preference1: data.preferences?.preference1 || "",
+      preference2: data.preferences?.preference2 || "",
+      preference3: data.preferences?.preference3 || "",
+    },
   };
 };
 

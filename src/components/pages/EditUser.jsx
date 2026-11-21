@@ -26,6 +26,10 @@ import ProfilePhotosSection from "../common/ProfilePhotosSection";
 import ConfirmDialog from "../common/ConfirmDialog";
 import normalizeUserData from "../../utils/normalizeUserData";
 import selectOptions from "../../utils/selectOptions";
+import {
+  isAllowedPartnerPreference,
+  preferenceSelectOptions,
+} from "../../utils/partnerPreferenceOptions";
 
 const EditUserPage = () => {
   const { id } = useParams();
@@ -41,7 +45,13 @@ const EditUserPage = () => {
     education: {},
     family: {},
     profession: {},
+    preferences: {
+      preference1: "",
+      preference2: "",
+      preference3: "",
+    },
   });
+  const [partnerPreferenceOptions, setPartnerPreferenceOptions] = useState([]);
   const [expandedSections, setExpandedSections] = useState({
     basic: true,
     birth: true,
@@ -52,6 +62,7 @@ const EditUserPage = () => {
     education: true,
     family: true,
     profession: true,
+    preferences: true,
     photos: true,
     privacy: true,
     password: true,
@@ -79,6 +90,21 @@ const EditUserPage = () => {
   useEffect(() => {
     fetchUserDetails();
   }, [fetchUserDetails]);
+
+  useEffect(() => {
+    let active = true;
+    adminApi
+      .fetchPartnerPreferenceOptions()
+      .then((options) => {
+        if (active) setPartnerPreferenceOptions(options);
+      })
+      .catch((err) => {
+        console.error("Failed to load partner preference options:", err);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleChange = (e, section, field, subSection) => {
     const { value, type, checked } = e.target;
@@ -263,6 +289,23 @@ const EditUserPage = () => {
                 : "public",
           };
         }
+      }
+      if (section === "preferences") {
+        const prefs = dataToSend;
+        for (const field of ["preference1", "preference2", "preference3"]) {
+          if (!isAllowedPartnerPreference(partnerPreferenceOptions, prefs[field])) {
+            setError(
+              "Each partner preference must be re-selected from the current list (legacy free-text cannot be saved)."
+            );
+            setLoading(false);
+            return;
+          }
+        }
+        dataToSend = {
+          preference1: String(prefs.preference1).trim(),
+          preference2: String(prefs.preference2).trim(),
+          preference3: String(prefs.preference3).trim(),
+        };
       }
       await adminApi.updateUserDetails(id, dataToSend, section);
       setSuccess(
@@ -1077,6 +1120,62 @@ const EditUserPage = () => {
             className="mt-6 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
           >
             Save Family
+          </button>
+        </SectionCard>
+
+        {/* Partner preferences */}
+        <SectionCard
+          title="Partner Preferences"
+          icon={<Heart className="h-5 w-5 text-gray-600" />}
+          isExpanded={expandedSections.preferences}
+          toggleSection={() => toggleSection("preferences")}
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <InputField
+              label="Preference 1"
+              name="preference1"
+              section="preferences"
+              type="select"
+              required
+              value={formData.preferences.preference1}
+              options={preferenceSelectOptions(
+                partnerPreferenceOptions,
+                formData.preferences.preference1
+              )}
+              onChange={(e) => handleChange(e, "preferences", "preference1")}
+            />
+            <InputField
+              label="Preference 2"
+              name="preference2"
+              section="preferences"
+              type="select"
+              required
+              value={formData.preferences.preference2}
+              options={preferenceSelectOptions(
+                partnerPreferenceOptions,
+                formData.preferences.preference2
+              )}
+              onChange={(e) => handleChange(e, "preferences", "preference2")}
+            />
+            <InputField
+              label="Preference 3"
+              name="preference3"
+              section="preferences"
+              type="select"
+              required
+              value={formData.preferences.preference3}
+              options={preferenceSelectOptions(
+                partnerPreferenceOptions,
+                formData.preferences.preference3
+              )}
+              onChange={(e) => handleChange(e, "preferences", "preference3")}
+            />
+          </div>
+          <button
+            onClick={(e) => handleSubmit(e, "preferences")}
+            className="mt-6 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            Save Partner Preferences
           </button>
         </SectionCard>
 
